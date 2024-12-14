@@ -72,7 +72,7 @@ class UAVSimulatorNode:
         self.control_sub = rospy.Subscriber('/uav/control', UAVCommand, self.control_callback)
 
         # 发布状态
-        self.state_pub = rospy.Publisher('/uav/state', UAVState, queue_size=10)
+        self.state_pub = rospy.Publisher('/uav/feedback', UAVState, queue_size=10)
 
         # 控制输入
         self.control_input = [9.81 * (0.32), 0, 0, 0]  # 默认推力平衡重力
