@@ -9,6 +9,41 @@
 using namespace Eigen;
 ros::Publisher command_pub;
 ros::Subscriber state_sub;
+// 无人机参数
+double mq = 0.33;
+double g = 9.81;
+double kp = 7.65, kv = 3.6, kr = 120.0, hr = 30.0;
+VectorXd p1 = (VectorXd(3) << -1.11674940231383e-06, 0.00216553259709083, -0.0276877882890898).finished();
+VectorXd p2 = (VectorXd(3) << 0.000413683067484175, 0.932875787982657, 0).finished();
+VectorXd p3 = (VectorXd(3) << 0.000343767264533347,1.05504806357145,0).finished();
+VectorXd p4 = (VectorXd(3) << 0.000770252131194202,0.866138866957217,0).finished();
+bool use_polyval = true;
+
+// 限制函数
+double clamp(double x, double min, double max) {
+    return x < min ? min : (x > max ? max : x);
+}
+
+// 多项式计算
+double polyval(double x, const VectorXd& p) {
+
+    // 多项式计算 y = polyval(p1, x)
+    double y = 0.0;
+    int degree = p.size() - 1;
+    for (int i = 0; i < p.size(); ++i) {
+        y += p[i] * std::pow(x, degree - i);
+    }
+
+    return y;
+}
+
+// 符号函数
+template <typename T>
+int sign(T value) {
+    if (value > 0) return 1;
+    if (value < 0) return -1;
+    return 0;
+}
 
 
 // 交叉乘积矩阵
@@ -69,13 +104,9 @@ void controllCallback(const test_controller::UAVState::ConstPtr& state_msg) {
             Matrix3d R = attitude.toRotationMatrix();
             Vector3d e3(0, 0, 1);
 
-            // 无人机参数
-            double mq = 0.33;
-            double g = 9.81;
-            double kp = 7.65, kv = 3.6, kr = 120.0, hr = 30.0;
 
             // 期望状态
-            Vector3d pd(1, 1, 1), dpd(0, 0, 0), d2pd(0, 0, 0), d3pd(0, 0, 0);
+            Vector3d pd(2, 2, 1), dpd(0, 0, 0), d2pd(0, 0, 0), d3pd(0, 0, 0);
 
             // 控制量
             double T;
@@ -87,12 +118,23 @@ void controllCallback(const test_controller::UAVState::ConstPtr& state_msg) {
 
             // 发布控制指令
             test_controller::UAVCommand command_msg;
-            command_msg.thrust = T;
-            command_msg.omega.x = omega(0);
-            command_msg.omega.y = omega(1);
-            command_msg.omega.z = omega(2);
-            command_pub.publish(command_msg);
-            // ROS_INFO("Published command: thrust = %f, omega = [%f, %f, %f]", T, omega(0), omega(1), omega(2));
+            if(use_polyval) {
+                command_msg.thrust = T;
+                // command_msg.thrust = clamp(polyval(T,p1),0,1);
+                command_msg.omega.x = clamp(sign(omega(0))*polyval(abs(omega(0)*180/3.141592654), p2),-360,360);
+                command_msg.omega.y = clamp(sign(omega(1))*polyval(abs(omega(1)*180/3.141592654), p3),-360,360);
+                command_msg.omega.z = clamp(0*sign(omega(2))*polyval(abs(omega(2)*180/3.141592654), p4),-180,180);
+                command_pub.publish(command_msg);
+            }
+            else {
+                command_msg.thrust = T;
+                command_msg.omega.x = omega(0);
+                command_msg.omega.y = omega(1);
+                command_msg.omega.z = omega(2);
+                command_pub.publish(command_msg);
+            }
+            ROS_INFO("Published command: thrust = %f, omega = [%f, %f, %f]", T, command_msg.omega.x, command_msg.omega.y, command_msg.omega.z);
+
         }
 
 // ROS 主程序
@@ -103,7 +145,7 @@ int main(int argc, char** argv) {
     // 发布和订阅
     command_pub = nh.advertise<test_controller::UAVCommand>("/uav/control", 10);
     state_sub = nh.subscribe<test_controller::UAVState>("/uav/state", 10,controllCallback);
-
+    
     ros::spin();
     return 0;
 }
