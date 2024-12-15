@@ -1,0 +1,23 @@
+<launch>
+    <!-- 启动 PX4 -->
+    <!-- <include file="$(find mavros)/launch/px4.launch" /> -->
+    <!-- 启动 Simu Python 脚本 -->
+    <node pkg="test_controller" type="simu.py" name="simu" output="log">
+        <!-- 可以在这里传递必要的参数 -->
+        <param name="simu_param" value="some_value" />
+    </node>
+    <!-- 启动 Controller 节点 -->
+    <node pkg="test_controller" type="controller" name="controller" output="log">
+        <!-- 可以在这里传递必要的参数 -->
+        <param name="controller_param" value="some_value" />
+    </node>
+
+    <!-- 启动 Estimator 节点 -->
+    <node pkg="test_controller" type="estimator" name="estimator" output="log">
+        <!-- 可以在这里传递必要的参数 -->
+        <param name="estimator_param" value="some_value" />
+    </node>
+
+
+
+</launch>

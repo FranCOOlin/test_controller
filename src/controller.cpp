@@ -121,8 +121,8 @@ void controllCallback(const test_controller::UAVState::ConstPtr& state_msg) {
             if(use_polyval) {
                 command_msg.thrust = T;
                 // command_msg.thrust = clamp(polyval(T,p1),0,1);
-                command_msg.omega.x = clamp(sign(omega(0))*polyval(abs(omega(0)*180/3.141592654), p2),-360,360);
-                command_msg.omega.y = clamp(sign(omega(1))*polyval(abs(omega(1)*180/3.141592654), p3),-360,360);
+                command_msg.omega.x = -clamp(sign(omega(0))*polyval(abs(omega(0)*180/3.141592654), p2),-360,360);
+                command_msg.omega.y = -clamp(sign(omega(1))*polyval(abs(omega(1)*180/3.141592654), p3),-360,360);
                 command_msg.omega.z = clamp(0*sign(omega(2))*polyval(abs(omega(2)*180/3.141592654), p4),-180,180);
                 command_pub.publish(command_msg);
             }
