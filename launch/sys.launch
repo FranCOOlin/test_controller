@@ -7,7 +7,7 @@
         <param name="simu_param" value="some_value" />
     </node>
     <!-- 启动 Controller 节点 -->
-    <node pkg="test_controller" type="controller" name="controller" output="log">
+    <node pkg="test_controller" type="controller" name="controller" output="screen">
         <!-- 可以在这里传递必要的参数 -->
         <param name="controller_param" value="some_value" />
     </node>
