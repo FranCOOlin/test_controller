@@ -111,8 +111,8 @@ void feedbackCallback(const geometry_msgs::PoseStamped::ConstPtr& feedback_msg, 
     Vector3d p_current(feedback_msg->pose.position.x, feedback_msg->pose.position.y, feedback_msg->pose.position.z);
     // 当前姿态（四元数）
     Quaterniond q_current(feedback_msg->pose.orientation.w, feedback_msg->pose.orientation.x, feedback_msg->pose.orientation.y, feedback_msg->pose.orientation.z);
-    ROS_INFO("p: %f %f %f", p_current(0), p_current(1), p_current(2));
-    ROS_INFO("q: %f %f %f %f", q_current.w(), q_current.x(), q_current.y(), q_current.z());
+    // ROS_INFO("p: %f %f %f", p_current(0), p_current(1), p_current(2));
+    // ROS_INFO("q: %f %f %f %f", q_current.w(), q_current.x(), q_current.y(), q_current.z());
     // 当前帧编号
     int frameNo = frame_counter++;
 
@@ -152,8 +152,8 @@ int main(int argc, char** argv) {
     double framerate = 300.0;
     nh.param("framerate", framerate, 200.0);
     std::string uav_id;
-    nh.param<std::string>("uav_id", uav_id, "");
-    if(uav_id==""){
+    ros::param::get("~uav_id", uav_id);  // 读取当前命名空间下的 uav_id
+    if (uav_id.empty()) {
         ROS_ERROR("uav_id not set");
         return -1;
     }
@@ -163,7 +163,8 @@ int main(int argc, char** argv) {
 
     // 发布器和订阅器
     ros::Publisher state_pub = nh.advertise<test_controller::UAVState>("/uav/state", 10);
-    std::string topic_name = "/vrpn_client_node/Tracker0/pose/" + uav_id + "/pose";
+    std::string topic_name = "/vrpn_client_node/" + uav_id + "/pose";
+    ROS_INFO("Subscribing to %s", topic_name.c_str());
     ros::Subscriber feedback_sub = nh.subscribe<geometry_msgs::PoseStamped>(topic_name, 10,
         boost::bind(feedbackCallback, _1, boost::ref(state_pub), boost::ref(frame_counter), framerate));
 
