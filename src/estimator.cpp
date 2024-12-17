@@ -164,7 +164,7 @@ int main(int argc, char** argv) {
     // 发布器和订阅器
     ros::Publisher state_pub = nh.advertise<test_controller::UAVState>("/uav/state", 10);
     std::string topic_name = "/vrpn_client_node/Tracker0/pose/" + uav_id + "/pose";
-    ros::Subscriber feedback_sub = nh.subscribe<test_controller::UAVState>(topic_name, 10,
+    ros::Subscriber feedback_sub = nh.subscribe<geometry_msgs::PoseStamped>(topic_name, 10,
         boost::bind(feedbackCallback, _1, boost::ref(state_pub), boost::ref(frame_counter), framerate));
 
     ros::spin();
