@@ -1,6 +1,7 @@
 #include <ros/ros.h>
 #include <geometry_msgs/Vector3.h>
 #include <geometry_msgs/Quaternion.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <test_controller/UAVState.h>
 #include <eigen3/Eigen/Dense>
 #include <deque>
@@ -105,13 +106,13 @@ void calculateState(Vector3d& p, Vector3d& vi, Vector3d& vb, Matrix3d& R, Vector
 }
 
 // ROS 回调函数
-void feedbackCallback(const test_controller::UAVState::ConstPtr& feedback_msg, ros::Publisher& state_pub, int& frame_counter, double framerate) {
+void feedbackCallback(const geometry_msgs::PoseStamped::ConstPtr& feedback_msg, ros::Publisher& state_pub, int& frame_counter, double framerate) {
     // 当前位置
-    Vector3d p_current(feedback_msg->position.x, feedback_msg->position.y, feedback_msg->position.z);
-
+    Vector3d p_current(feedback_msg->pose.position.x, feedback_msg->pose.position.y, feedback_msg->pose.position.z);
     // 当前姿态（四元数）
-    Quaterniond q_current(feedback_msg->attitude.w, feedback_msg->attitude.x, feedback_msg->attitude.y, feedback_msg->attitude.z);
-
+    Quaterniond q_current(feedback_msg->pose.orientation.w, feedback_msg->pose.orientation.x, feedback_msg->pose.orientation.y, feedback_msg->pose.orientation.z);
+    ROS_INFO("p: %f %f %f", p_current(0), p_current(1), p_current(2));
+    ROS_INFO("q: %f %f %f %f", q_current.w(), q_current.x(), q_current.y(), q_current.z());
     // 当前帧编号
     int frameNo = frame_counter++;
 
@@ -150,13 +151,19 @@ int main(int argc, char** argv) {
     // 参数：帧率
     double framerate = 300.0;
     nh.param("framerate", framerate, 200.0);
+    nh.param<std::string>("uav_id", uav_id, "");
+    if(uav_id==""){
+        ROS_ERROR("uav_id not set");
+        return -1;
+    }
 
     // 帧计数器
     int frame_counter = 0;
 
     // 发布器和订阅器
     ros::Publisher state_pub = nh.advertise<test_controller::UAVState>("/uav/state", 10);
-    ros::Subscriber feedback_sub = nh.subscribe<test_controller::UAVState>("/uav/feedback", 10,
+    std::string topic_name = "/vrpn_client_node/Tracker0/pose/" + uav_id + "/pose";
+    ros::Subscriber feedback_sub = nh.subscribe<test_controller::UAVState>(topic_name, 10,
         boost::bind(feedbackCallback, _1, boost::ref(state_pub), boost::ref(frame_counter), framerate));
 
     ros::spin();
