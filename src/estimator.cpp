@@ -151,6 +151,7 @@ int main(int argc, char** argv) {
     // 参数：帧率
     double framerate = 300.0;
     nh.param("framerate", framerate, 200.0);
+    std::string uav_id;
     nh.param<std::string>("uav_id", uav_id, "");
     if(uav_id==""){
         ROS_ERROR("uav_id not set");
