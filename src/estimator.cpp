@@ -52,7 +52,7 @@ Matrix3d q2R(const Quaterniond& quat) {
 
 // 计算当前状态
 void calculateState(Vector3d& p, Vector3d& vi, Vector3d& vb, Matrix3d& R, Vector3d& omega,
-                    const Vector3d& p_current, const Quaterniond& q_current, int frameNo, double framerate, bool zDown = true) {
+                    Vector3d& p_current, Quaterniond& q_current, int frameNo, double framerate, bool zDown = false) {
     // 固定旋转矩阵 R1
     Matrix3d R1;
     R1 << 1, 0,  0,
@@ -68,6 +68,9 @@ void calculateState(Vector3d& p, Vector3d& vi, Vector3d& vb, Matrix3d& R, Vector
     else{
         R = R1 * q2R(q_current) * R1.transpose();
         p = R1 * p_current;
+        p_current = p;
+        Quaterniond q(R);
+        q_current = q;
     }
     
 
@@ -111,8 +114,8 @@ void feedbackCallback(const geometry_msgs::PoseStamped::ConstPtr& feedback_msg, 
     Vector3d p_current(feedback_msg->pose.position.x, feedback_msg->pose.position.y, feedback_msg->pose.position.z);
     // 当前姿态（四元数）
     Quaterniond q_current(feedback_msg->pose.orientation.w, feedback_msg->pose.orientation.x, feedback_msg->pose.orientation.y, feedback_msg->pose.orientation.z);
-    // ROS_INFO("p: %f %f %f", p_current(0), p_current(1), p_current(2));
-    // ROS_INFO("q: %f %f %f %f", q_current.w(), q_current.x(), q_current.y(), q_current.z());
+    //ROS_INFO("p: %f %f %f", p_current(0), p_current(1), p_current(2));
+    //ROS_INFO("q: %f %f %f %f", q_current.w(), q_current.x(), q_current.y(), q_current.z());
     // 当前帧编号
     int frameNo = frame_counter++;
 
@@ -164,7 +167,7 @@ int main(int argc, char** argv) {
     // 发布器和订阅器
     ros::Publisher state_pub = nh.advertise<test_controller::UAVState>("/uav/state", 10);
     std::string topic_name = "/vrpn_client_node/" + uav_id + "/pose";
-    ROS_INFO("Subscribing to %s", topic_name.c_str());
+    //ROS_INFO("Subscribing to %s", topic_name.c_str());
     ros::Subscriber feedback_sub = nh.subscribe<geometry_msgs::PoseStamped>(topic_name, 10,
         boost::bind(feedbackCallback, _1, boost::ref(state_pub), boost::ref(frame_counter), framerate));
 
