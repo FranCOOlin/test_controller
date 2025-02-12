@@ -1,0 +1,15 @@
+{
+    "controller": {
+        "kp": 1.5,
+        "ki": 0.1,
+        "kd": 0.05
+    },
+    "observer": {
+        "noise_std": 0.2,
+        "mode": 1
+    },
+    "traj_gen": {
+        "speed": 2.0,
+        "mode": 0
+    }
+}

@@ -1,219 +1,193 @@
 #include <ros/ros.h>
-#include <geometry_msgs/Vector3.h>
-#include <geometry_msgs/Quaternion.h>
-#include <test_controller/UAVState.h>
-#include <test_controller/UAVCommand.h>
-#include <mavros_msgs/State.h>
-#include <mavros_msgs/Thrust.h>
-#include <mavros_msgs/CommandBool.h>
+#include <std_msgs/Float64.h>
+#include <std_msgs/Float64MultiArray.h>
+#include <std_msgs/String.h>
+#include <std_msgs/Int32.h>
+
+// MAVROS 消息
 #include <mavros_msgs/SetMode.h>
-#include <geometry_msgs/TwistStamped.h>
-#include <geometry_msgs/PoseStamped.h>
+#include <mavros_msgs/CommandBool.h>
+#include <mavros_msgs/State.h>
+
+#include <functional>
+#include <utility>  // std::ref
 #include <eigen3/Eigen/Dense>
-#include <cmath>
-#include <string>
 
-using namespace Eigen;
-ros::Publisher local_rate_pub;
-ros::Publisher local_thrust_pub;
-ros::Subscriber status_sub;
-ros::Subscriber state_sub;
-ros::Time last_req;
-ros::ServiceClient arming_client;
-ros::ServiceClient set_mode_client;
-mavros_msgs::SetMode offb_set_mode;
-mavros_msgs::CommandBool arm_cmd;
+// 引入各模块头文件
+#include "test_controller/common/params.h"          // Params
+#include "test_controller/common/state.h"           // State
+#include "test_controller/controller/controller.h"  // Controller 抽象基类
+#include "test_controller/controller/controller_scheduler.h"  // ControllerScheduler 类
+#include "test_controller/custom/mycontroller.h"   // MyController 派生类
+#include "test_controller/custom/myparams.h"       // MyParams 派生类
+#include "test_controller/custom/mystate.h"        // MyState 派生类
+#include "test_controller/custom/mytrajectory.h"      // MyTrajectory 派生类
+#include "test_controller/custom/mycontroller.h"           // 用户自定义控制函数 myControlFunction 的声明
+
+// ---------- 全局变量 ----------
+// 全局 MAVROS 状态，由 MAVROS 状态话题回调更新
 mavros_msgs::State current_state;
-// 无人机参数
-double mq = 0.316;
-double g = 9.81;
-double kp = 9.75, kv = 3.6, kr = 120.0, hr = 30.0;
-Vector3d p1(-1.11674940231383e-06, 0.00216553259709083, -0.0276877882890898);
-Vector3d p2(0.000413683067484175, 0.932875787982657, 0);
-Vector3d p3(0.000343767264533347,1.05504806357145,0);
-Vector3d p4(0.000770252131194202,0.866138866957217,0);
-bool use_polyval = true;
-double start_time = 0;
 
-// 限制函数
-double clamp(double x, double min, double max) {
-    return x < min ? min : (x > max ? max : x);
-}
-
-// 多项式计算
-double polyval(double x, const VectorXd& p) {
-
-    // 多项式计算 y = polyval(p1, x)
-    double y = 0.0;
-    int degree = p.size() - 1;
-    for (int i = 0; i < p.size(); ++i) {
-        y += p[i] * std::pow(x, degree - i);
-    }
-
-    return y;
-}
-
-// 符号函数
-template <typename T>
-int sign(T value) {
-    if (value > 0) return 1;
-    if (value < 0) return -1;
-    return 0;
-}
-
-
-// 交叉乘积矩阵
-Matrix3d S(const Vector3d& vec) {
-    Matrix3d mat;
-    mat <<  0,       -vec(2),  vec(1),
-            vec(2),  0,       -vec(0),
-           -vec(1),  vec(0),   0;
-    return mat;
-}
-
-// 投影矩阵
-Matrix3d PI(const Vector3d& vec) {
-    return Matrix3d::Identity() - vec * vec.transpose();
-}
-
-// 控制算法
-void Controller(double& T, Vector3d& omega, const Vector3d& pd, const Vector3d& dpd, const Vector3d& d2pd,
-                const Vector3d& d3pd, const Vector3d& p, const Vector3d& v, const Matrix3d& R, double yaw,
-                double mq, double g, const Vector3d& e3, double kp, double kv, double kr, double hr) {
-
-    // 计算位置和速度误差
-    double b =0.5;
-    Vector3d zp = p - pd;
-    double nzp = zp.norm();
-    Vector3d zv = v - dpd;
-    double nzv = zv.norm();
-    Vector3d u = -kp * zp - kv * zv;
-    Vector3d Fd = mq * (u - g * e3 + d2pd);
-    // ROS_INFO("Fd: %f %f %f", Fd(0), Fd(1), Fd(2));
-    double Td = Fd.norm();
-    Vector3d r3d = -Fd / Td;
-    Vector3d r3 = R*e3;
-    T = Td*r3d.dot(r3) - 0.25;
-    // ROS_INFO("r3d: %f %f %f", r3d(0), r3d(1), r3d(2));
-    Vector3d F = -T*R*e3;
-    Vector3d dzv = F/mq + g*e3 - d2pd;
-    Vector3d dFd = mq*(-kp*zv - kv*dzv + d3pd);
-    Vector3d dr3d = S(r3d)*S(r3d)*dFd/Fd.norm();
-    Vector3d zr = r3 - r3d;
-    omega = - S(e3)*S(e3)*(R.transpose()*S(r3d)*dr3d + kr/hr*S(e3)*R.transpose()*r3d + Td/(mq*hr)*S(e3)*R.transpose()*(b*zp+zv)) - 0.1*(yaw-1.57)*e3;
-    // ROS_INFO("yaw: %f", yaw);
-
-
-    
-}
-void status_cb(const mavros_msgs::State::ConstPtr& msg)
+// ---------- MAVROS 状态回调 ----------
+void status_cb(const mavros_msgs::State::ConstPtr &msg)
 {
     current_state = *msg;
+    ROS_INFO("MAVROS state updated: mode=%s, armed=%d", msg->mode.c_str(), msg->armed);
 }
 
-void controllCallback(const test_controller::UAVState::ConstPtr& state_msg) {
-            // 解析输入状态
-            Vector3d position(state_msg->position.x, state_msg->position.y, state_msg->position.z);
-            Vector3d velocity(state_msg->velocity.x, state_msg->velocity.y, state_msg->velocity.z);
-            Quaterniond attitude(
-                state_msg->attitude.w,
-                state_msg->attitude.x,
-                state_msg->attitude.y,
-                state_msg->attitude.z
-            );
-            Matrix3d R = attitude.toRotationMatrix();
-            //ROS_INFO("R: %f %f %f %f %f %f %f %f %f", R(0,0), R(0,1), R(0,2), R(1,0), R(1,1), R(1,2), R(2,0), R(2,1), R(2,2));
-            Vector3d euler = attitude.toRotationMatrix().eulerAngles(2, 1, 0);
-            Vector3d e3(0, 0, 1);
-            double time = ros::Time::now().toSec();
-
-            // 期望状态 
-            double A=0.0,B=0.0,a=0.8,b=0.8;
-            Vector3d pd(A*sin((time-start_time)*a),B*cos((time-start_time)*b), -0.8), dpd(A*a*cos((time-start_time)*a), -B*b*sin((time-start_time)*b), 0), d2pd(-A*a*a*sin((time-start_time)*a), -B*b*b*cos((time-start_time)*b), 0), d3pd(-A*a*a*a*cos((time-start_time)*a), B*b*b*b*sin((time-start_time)*b), 0);
-
-            // 控制量
-            double T;
-            Vector3d omega;
-
-            // 调用控制算法
-            Controller(T, omega, pd, dpd, d2pd, d3pd, position, velocity, R, euler(0),
-                       mq, g, e3, kp, kv, kr, hr);
-
-            // 发布控制指令
-            geometry_msgs::TwistStamped rate;
-            mavros_msgs::Thrust thrust;
-            if(use_polyval) {
-                //thrust.thrust = T;
-                thrust.thrust = clamp(polyval(T*1000/9.8,p1),0,1);
-                //ROS_INFO("Thrust:%f",T);
-                rate.twist.angular.y = clamp(sign(omega(0))*polyval(abs(omega(0)), p2),-3.14,3.14);
-                rate.twist.angular.x = clamp(sign(omega(1))*polyval(abs(omega(1)), p3),-3.14,3.14);
-                rate.twist.angular.z = clamp(0*sign(omega(2))*polyval(abs(omega(2)), p4),-3.14,3.14);
-            }
-            else {
-                thrust.thrust = T;
-                rate.twist.angular.x = omega(0);
-                rate.twist.angular.y = omega(1);
-                rate.twist.angular.z = omega(2);
-            }
-            local_rate_pub.publish(rate);
-            local_thrust_pub.publish(thrust);
-             // Check if we need to switch to OFFBOARD mode
-            if ( (ros::Time::now() - last_req) > ros::Duration(5.0)) {
-                if(current_state.mode != "OFFBOARD"){
-                    ROS_INFO("Switching to OFFBOARD mode");  
-                    if (set_mode_client.call(offb_set_mode) && offb_set_mode.response.mode_sent) {
-                        ROS_INFO("OFFBOARD enabled");
-                    }
-                    last_req = ros::Time::now();
-                }
-                
-            } 
-            //if(current_state.mode == "OFFBOARD"){
-            if(current_state.mode == "OFFBOARD" && (ros::Time::now() - last_req) > ros::Duration(5.0)){
-                // If not armed, try to arm
-                    if(!current_state.armed){
-                        ROS_INFO("Arming vehicle");
-                        if (arming_client.call(arm_cmd) && arm_cmd.response.success) {
-                            ROS_INFO("Vehicle armed");
-                        }
-                        last_req = ros::Time::now();
-                    }
-                
-            }
-
-            //ROS_INFO("Published command: thrust = %f, omega = [%f, %f, %f]", T, command_msg.omega.x, command_msg.omega.y, command_msg.omega.z);
-
-        }
-
-// ROS 主程序
-int main(int argc, char** argv) {
-    ros::init(argc, argv, "test_controllerler");
-    ros::NodeHandle nh;
-    std::string uav_id;
-    ros::param::get("~uav_id", uav_id);  // 读取当前命名空间下的 uav_id
-    if (uav_id.empty()) {
-        ROS_ERROR("uav_id not set");
-        return -1;
-    }
-    // 发布和订阅
-    local_rate_pub = nh.advertise<geometry_msgs::TwistStamped>(uav_id + "/mavros/setpoint_attitude/cmd_vel", 10);
-    local_thrust_pub = nh.advertise<mavros_msgs::Thrust>(uav_id + "/mavros/setpoint_attitude/thrust", 10);
-    state_sub = nh.subscribe<test_controller::UAVState>("/uav/state", 10,controllCallback);
-    status_sub = nh.subscribe(uav_id + "/mavros/state", 10, status_cb);
-    // Service clients
-    arming_client = nh.serviceClient<mavros_msgs::CommandBool>(uav_id + "/mavros/cmd/arming");
-    set_mode_client = nh.serviceClient<mavros_msgs::SetMode>(uav_id + "/mavros/set_mode");
-
-    // Wait for the services to be available
-    ros::service::waitForService(uav_id + "/mavros/cmd/arming");
-    ros::service::waitForService(uav_id + "/mavros/set_mode");
-
+// ---------- Offboard/Arming 定时器回调 ----------
+// 以引用方式传入 MAVROS 服务客户端
+void offboardArmCallback(const ros::TimerEvent &event,
+                         ros::ServiceClient &set_mode_client,
+                         ros::ServiceClient &arming_client)
+{
+  if (current_state.mode != "OFFBOARD") {
+    ROS_INFO("Switching to OFFBOARD mode");
+    mavros_msgs::SetMode offb_set_mode;
     offb_set_mode.request.custom_mode = "OFFBOARD";
+    if (set_mode_client.call(offb_set_mode) && offb_set_mode.response.mode_sent) {
+      ROS_INFO("OFFBOARD enabled");
+    }
+  }
+  else if (current_state.mode == "OFFBOARD" && !current_state.armed) {
+    ROS_INFO("Arming vehicle");
+    mavros_msgs::CommandBool arm_cmd;
     arm_cmd.request.value = true;
-    last_req = ros::Time::now();
-    start_time = ros::Time::now().toSec();
-    
-    ros::spin();
-    return 0;
+    if (arming_client.call(arm_cmd) && arm_cmd.response.success) {
+      ROS_INFO("Vehicle armed");
+    }
+  }
+}
+
+// ---------- 其它回调函数 ----------
+
+void stateCallback(const std_msgs::Float64::ConstPtr &msg, common::State &state)
+{
+  // state.controller_pos = msg->data;
+  ROS_INFO("Control state updated: pos = %f", state.controller_pos);
+}
+
+void trajCallback(const std_msgs::Float64MultiArray::ConstPtr &msg, common::MyTrajectory &trajectory)
+{
+  trajectory.setWaypoints(Eigen::Map<Eigen::VectorXd>(msg->data.data(), msg->data.size()));
+  ROS_INFO("Trajectory updated: received %lu waypoints", trajectory.waypoints.size());
+}
+
+void trajSwitchCallback(const std_msgs::String::ConstPtr &msg, common::Trajectory &trajectory)
+{
+  // trajectory.traj_type = msg->data;
+  ROS_INFO("Trajectory switched: new type = %s", trajectory.traj_type.c_str());
+}
+
+void controllerSWCallback(const std_msgs::Int32::ConstPtr &msg,
+                          controller::ControllerScheduler &scheduler)
+{
+  // 这里直接传入目标 Controller 对象，调用 switchController
+  switch (msg->data) {
+  case 0:
+    scheduler.switchController(*scheduler.controllers[0]);
+    ROS_INFO("Switched to controller with registerId: %d", *scheduler.controllers[0]->registerId);
+    break;
+  default:
+    ROS_WARN("Invalid controller switch command: %d", msg->data);
+    return;
+  }
+  
+}
+
+// ---------- main() ----------
+int main(int argc, char **argv)
+{
+  ros::init(argc, argv, "controller_node");
+  ros::NodeHandle nh("~");
+
+  // 读取 UAV ID 参数（实际系统可能有多个 UAV）
+  std::string uav_id;
+  ros::param::get("~uav_id", uav_id);
+  if (uav_id.empty()) {
+    ROS_ERROR("uav_id not set");
+    return -1;
+  }
+
+  // 订阅 MAVROS 状态话题，话题名称为 uav_id + "/mavros/state"
+  ros::Subscriber status_sub = nh.subscribe<mavros_msgs::State>(uav_id + "/mavros/state", 10, status_cb);
+
+  // 创建统一对象（栈变量）
+  common::MyParams params;
+  common::MyState state;
+  common::MyTrajectory trajectory;
+
+  // 加载参数文件
+  if (!params.loadFromFile("json/myparams.json")) {
+    ROS_ERROR("Failed to load parameters from file.");
+    return -1;
+  }
+
+  // 打印加载的参数（仅示例）
+  ROS_INFO("Loaded parameters:");
+  ROS_INFO("controller/kp = %f", params.controller_kp);
+  ROS_INFO("controller/ki = %f", params.controller_ki);
+  ROS_INFO("controller/kd = %f", params.controller_kd);
+  ROS_INFO("observer/noise_std = %f", params.observer_noise_std);
+  ROS_INFO("traj_gen/speed = %f", params.traj_gen_speed);
+  ROS_INFO("custom/param1 = %f", params.custom_param1);
+  ROS_INFO("custom/param2 = %f", params.custom_param2);
+
+  // 初始化 MyController 对象（作为 Controller 的派生类），传入对象引用及用户自定义控制函数 myControlFunction
+  controller::MyController myCtrl(params, state, trajectory);
+  
+  // 初始化 ControllerScheduler 对象（栈变量），先注册 Controller，再调用 switchController
+  controller::ControllerScheduler scheduler;
+  int regId = scheduler.registerController(&myCtrl);
+  scheduler.switchController(myCtrl); // 直接传入 Controller 对象
+
+  // 创建 MAVROS 服务客户端
+  ros::ServiceClient set_mode_client = nh.serviceClient<mavros_msgs::SetMode>("mavros/set_mode");
+  ros::ServiceClient arming_client = nh.serviceClient<mavros_msgs::CommandBool>("mavros/cmd/arming");
+
+  // 初始化控制输入 Publisher
+  ros::Publisher control_pub = nh.advertise<std_msgs::Float64>("control_input", 10);
+
+  // 订阅其它话题，使用 std::bind 和 std::ref 传入对象引用
+  ros::Subscriber state_sub_local = nh.subscribe<std_msgs::Float64>("state", 10,
+    std::bind(stateCallback, std::placeholders::_1, std::ref(state)));
+  ros::Subscriber traj_sub = nh.subscribe<std_msgs::Float64MultiArray>("trajectory", 10,
+    std::bind(trajCallback, std::placeholders::_1, std::ref(trajectory)));
+  ros::Subscriber traj_switch_sub = nh.subscribe<std_msgs::String>("trajswitch", 10,
+    std::bind(trajSwitchCallback, std::placeholders::_1, std::ref(trajectory)));
+  // 这里直接传 Controller 对象引用
+  ros::Subscriber controller_sw_sub = nh.subscribe<std_msgs::Int32>("controller_sw", 10,
+    std::bind(controllerSWCallback, std::placeholders::_1, std::ref(params), std::ref(scheduler), std::ref(myCtrl)));
+
+  // 利用 ROS 定时器实现 offboard/arming 切换，每 5 秒触发一次
+  ros::Timer offboard_arm_timer = nh.createTimer(ros::Duration(5.0),
+    std::bind(offboardArmCallback, std::placeholders::_1, std::ref(set_mode_client), std::ref(arming_client)));
+
+  ros::Rate rate(10);
+  double dt = 0.1;
+
+  while (ros::ok())
+  {
+    ros::spinOnce();
+
+    // 计算误差：目标航点（若存在）与当前 State 的差值
+    double error = 0.0;
+    if (!trajectory.waypoints.empty()) {
+      double target = trajectory.waypoints[0];
+      error = target - state.controller_pos;
+    }
+
+    // 调用 ControllerScheduler 的 run() 接口，不需要传入参数，直接调用当前控制器的 update()
+    Eigen::VectorXd control_signal = scheduler.run();
+
+    // 将 Eigen::VectorXd 的第一个元素作为控制信号发布（根据实际需要转换）
+    std_msgs::Float64 ctrl_msg;
+    ctrl_msg.data = (control_signal.size() > 0) ? control_signal(0) : 0.0;
+    control_pub.publish(ctrl_msg);
+    ROS_INFO("Published control signal: %f", ctrl_msg.data);
+
+    rate.sleep();
+  }
+
+  return 0;
 }

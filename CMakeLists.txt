@@ -125,19 +125,20 @@ include
   ${Boost_INCLUDE_DIRS}
 )
 
-## Declare a C++ library
-add_library(integrator_lib
-  src/integrator.cpp
-)
+# ## Declare a C++ library
+# add_library(integrator_lib
+#   src/integrator.cpp
+# )
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
-add_dependencies(integrator_lib ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(integrator_lib ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
+add_executable(controller_old src/controller_old.cpp)
 add_executable(controller src/controller.cpp)
 add_executable(estimator src/estimator.cpp)
 add_executable(simulator src/simu.cpp)
@@ -154,6 +155,10 @@ add_executable(sin_publish src/sin_publisher.cpp)
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
+target_link_libraries(
+  controller_old
+  ${catkin_LIBRARIES}
+)
 target_link_libraries(
   controller
   ${catkin_LIBRARIES}
@@ -176,10 +181,10 @@ target_link_libraries(
   sin_publish
   ${catkin_LIBRARIES}
 )
-target_link_libraries(
-  integrator_lib
-  ${catkin_LIBRARIES}
-)
+# target_link_libraries(
+#   integrator_lib
+#   ${catkin_LIBRARIES}
+# )
 #############
 ## Install ##
 #############

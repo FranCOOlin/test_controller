@@ -1,5 +1,5 @@
-#ifndef _INTEGRATOR_
-#define _INTEGRATOR_
+#ifndef INTEGRATOR_H
+#define INTEGRATOR_H
 #include <iostream>
 #include <vector>
 #include <boost/numeric/odeint.hpp>
@@ -8,7 +8,7 @@
 
 typedef std::vector<double> state_type;
 
-namespace integrator {
+namespace common {
 
 // 定义一个动力学方程的类型（dx/dt = f(x, t)）
 using SystemDynamics = std::function<void(const state_type&, state_type&, double)>;
@@ -44,6 +44,6 @@ private:
     StepperType stepper_;      // 步骤器，作为成员变量
 };
 
-}  // namespace integrator
+}  // namespace common
 
 #endif

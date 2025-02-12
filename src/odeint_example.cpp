@@ -2,7 +2,7 @@
 #include <test_controller/Float64MultiArrayWithHeader.h>  // 引入新定义的消息类型
 #include <vector>
 #include <boost/numeric/odeint.hpp>
-#include "test_controller/integrator.hpp"
+#include "test_controller/common/integrator.hpp"
 #include <eigen3/Eigen/Dense>
 
 using namespace boost::numeric::odeint;
@@ -74,14 +74,14 @@ int main(int argc, char** argv) {
     pub = nh.advertise<test_controller::Float64MultiArrayWithHeader>("integral_topic", 10);
 
     // 设置时间步长（每步时间），并设定更新频率
-    const double dt = 1. / 8000;
-    ros::Rate loop_rate(1 / dt);  // 每秒钟8000次更新
+    const double dt = 1. / 800;
+    ros::Rate loop_rate(1 / dt);  // 每秒钟800次更新
 
     // 初始化x为0
     x.assign(12, 0.0);
 
     // 创建一个积分器，使用Runge-Kutta-Fehlberg78算法
-    integrator::Integrator<boost::numeric::odeint::runge_kutta_fehlberg78<state_type>> integrator(sin_ode, 0.01);
+    common::Integrator<boost::numeric::odeint::runge_kutta_fehlberg78<state_type>> integrator(sin_ode, 0.01);
 
     while (ros::ok()) {
         // 获取当前时间
