@@ -10,53 +10,81 @@ namespace common {
 class MyParams : public Params {
 public:
     // 定义多个 double 类型的参数
-    double controller_kp;
-    double controller_ki;
-    double controller_kd;
-    double observer_noise_std;
-    double traj_gen_speed;
-    double extra_param;  // 示例：可根据需要添加更多参数
-
-    MyParams() 
-      : controller_kp(0.0), controller_ki(0.0), controller_kd(0.0),
-        observer_noise_std(0.0), traj_gen_speed(0.0), extra_param(0.0)
-    { }
+    double mq, g, kp, kv, kr, hr;
+    bool use_polyval ;
+    Eigen::Vector3d p1, p2, p3, p4;
+    // MyParams() //构造函数
+    //   : controller_kp(0.0), controller_ki(0.0), controller_kd(0.0),
+    //     observer_noise_std(0.0), traj_gen_speed(0.0), extra_param(0.0)
+    // { }
 
     virtual ~MyParams() = default;
 
     // 从 ROS 参数服务器加载参数的实现
     virtual bool loadFromRos(ros::NodeHandle &nh) override {
-        if (!nh.getParam("controller/kp", controller_kp)) {
+        std::string uav_id;
+        ros::param::get("~uav_id", uav_id);// 读取当前命名空间下的 uav_id
+        if (uav_id.empty()) {
+            ROS_ERROR("uav_id not set");
+            return -1;
+        }
+        if (!nh.getParam(uav_id+"controller/kp", kp)) {
             ROS_WARN("Failed to get parameter: controller/kp");
             return false;
         }
-        if (!nh.getParam("controller/ki", controller_ki)) {
-            ROS_WARN("Failed to get parameter: controller/ki");
+        if (!nh.getParam(uav_id+"controller/kv", kv)) {
+            ROS_WARN("Failed to get parameter: controller/kv");
             return false;
         }
-        if (!nh.getParam("controller/kd", controller_kd)) {
-            ROS_WARN("Failed to get parameter: controller/kd");
+        if (!nh.getParam(uav_id+"controller/kr", kr)) {
+            ROS_WARN("Failed to get parameter: controller/kr");
             return false;
         }
-        if (!nh.getParam("observer/noise_std", observer_noise_std)) {
-            ROS_WARN("Failed to get parameter: observer/noise_std");
+        if (!nh.getParam(uav_id+"controller/hr", hr)) {
+            ROS_WARN("Failed to get parameter: controller/hr");
             return false;
         }
-        if (!nh.getParam("traj_gen/speed", traj_gen_speed)) {
-            ROS_WARN("Failed to get parameter: traj_gen/speed");
+        if (!nh.getParam(uav_id+"controller/mq", mq)) {
+            ROS_WARN("Failed to get parameter: controller/mq");
             return false;
         }
-        if (!nh.getParam("extra_param", extra_param)) {
-            ROS_WARN("Failed to get parameter: extra_param");
+        if (!nh.getParam(uav_id+"controller/g", g)) {
+            ROS_WARN("Failed to get parameter: controller/g");
             return false;
         }
-        // 存储到 JSON 字典中
-        paramDict["controller"]["kp"] = controller_kp;
-        paramDict["controller"]["ki"] = controller_ki;
-        paramDict["controller"]["kd"] = controller_kd;
-        paramDict["observer"]["noise_std"] = observer_noise_std;
-        paramDict["traj_gen"]["speed"] = traj_gen_speed;
-        paramDict["extra_param"] = extra_param;
+        if (!nh.getParam(uav_id+"controller/use_polyval", use_polyval)) {
+            ROS_WARN("Failed to get parameter: controller/use_polyval");
+            return false;
+        }
+        std::vector<double> temp;
+        if (!nh.getParam(uav_id+"controller/p1", temp)) {
+            ROS_WARN("Failed to get parameter: controller/p1");
+            return false;
+        }
+        else{
+            p1 = Eigen::Map<const Eigen::VectorXd>(temp.data(), temp.size());
+        }
+        if (!nh.getParam(uav_id+"controller/p2", temp)) {
+            ROS_WARN("Failed to get parameter: controller/p2");
+            return false;
+        }
+        else{
+            p2 = Eigen::Map<const Eigen::VectorXd>(temp.data(), temp.size());
+        }
+        if (!nh.getParam(uav_id+"controller/p3", temp)) {
+            ROS_WARN("Failed to get parameter: controller/p3");
+            return false;
+        }
+        else{
+            p3 = Eigen::Map<const Eigen::VectorXd>(temp.data(), temp.size());
+        }
+        if (!nh.getParam(uav_id+"controller/p4", temp)) {
+            ROS_WARN("Failed to get parameter: controller/p4");
+            return false;
+        }
+        else{
+            p4 = Eigen::Map<const Eigen::VectorXd>(temp.data(), temp.size());
+        }
 
         ROS_INFO("Loaded parameters from ROS parameter server.");
         return true;
@@ -77,12 +105,17 @@ public:
         }
         // 从 JSON 中读取各个参数
         try {
-            controller_kp = paramDict["controller"]["kp"].get<double>();
-            controller_ki = paramDict["controller"]["ki"].get<double>();
-            controller_kd = paramDict["controller"]["kd"].get<double>();
-            observer_noise_std = paramDict["observer"]["noise_std"].get<double>();
-            traj_gen_speed = paramDict["traj_gen"]["speed"].get<double>();
-            extra_param = paramDict["extra_param"].get<double>();
+            mq = paramDict["controller"]["mq"].get<double>();
+            g = paramDict["controller"]["g"].get<double>();
+            kp = paramDict["controller"]["kp"].get<double>();
+            kv = paramDict["controller"]["kv"].get<double>();
+            kr = paramDict["controller"]["kr"].get<double>();
+            hr = paramDict["controller"]["hr"].get<double>();
+            use_polyval = paramDict["controller"]["use_polyval"].get<bool>();
+            p1 = Eigen::Map<const Eigen::VectorXd>(paramDict["controller"]["p1"].get<std::vector<double>>().data(), paramDict["controller"]["p1"].size());
+            p2 = Eigen::Map<const Eigen::VectorXd>(paramDict["controller"]["p2"].get<std::vector<double>>().data(), paramDict["controller"]["p2"].size());
+            p3 = Eigen::Map<const Eigen::VectorXd>(paramDict["controller"]["p3"].get<std::vector<double>>().data(), paramDict["controller"]["p3"].size());
+            p4 = Eigen::Map<const Eigen::VectorXd>(paramDict["controller"]["p4"].get<std::vector<double>>().data(), paramDict["controller"]["p4"].size());
         } catch (const std::exception &e) {
             ROS_ERROR("Exception while parsing parameters from JSON: %s", e.what());
             return false;

@@ -63,16 +63,21 @@ class UAVSimulatorNode:
     def __init__(self):
         # 初始化 ROS 节点
         rospy.init_node('uav_simulator', anonymous=True)
-
+        uav_id = rospy.get_param('~uav_id', "")
+        if uav_id=="":
+            rospy.logerr("Please specify the UAV ID")
+            exit(-1)
+        else:
+            rospy.loginfo("UAV ID: %s", uav_id)
         # 初始状态：位置、速度、方向等
-        init_state = [0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+        init_state = [10, 10, 1, 0, 0, 0, 1, 0, 0, 0]
         self.simu_model = Quadrotor(init_state)
 
         # 订阅控制输入
-        self.control_sub = rospy.Subscriber('/uav/control', UAVCommand, self.control_callback)
+        self.control_sub = rospy.Subscriber(uav_id+'/control', UAVCommand, self.control_callback)
 
         # 发布状态
-        self.state_pub = rospy.Publisher('/uav/feedback', UAVState, queue_size=10)
+        self.state_pub = rospy.Publisher(uav_id+'/feedback', UAVState, queue_size=10)
 
         # 控制输入
         self.control_input = [9.81 * (0.32), 0, 0, 0]  # 默认推力平衡重力
@@ -83,8 +88,8 @@ class UAVSimulatorNode:
     def control_callback(self, msg: UAVCommand):
         # 更新控制输入
         thrust = msg.thrust
-        torque = [msg.omega.x, msg.omega.y, msg.omega.z]
-        self.control_input = [thrust] + torque
+        omega = [msg.omega.x, msg.omega.y, msg.omega.z]
+        self.control_input = [thrust] + omega
 
     def run(self):
         while not rospy.is_shutdown():
