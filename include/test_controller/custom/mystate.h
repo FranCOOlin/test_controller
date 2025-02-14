@@ -14,6 +14,7 @@ public:
     Eigen::Vector4d q;     // 四元数
     Eigen::Vector3d euler; // 欧拉角
     Eigen::Matrix3d R;     // 旋转矩阵
+    Eigen::Vector3d omega; // 角速度
 
     MyState()
         : p(Eigen::Vector3d::Zero()),
@@ -21,7 +22,8 @@ public:
         vb(Eigen::Vector3d::Zero()),
         q(Eigen::Vector4d::Zero()),
         euler(Eigen::Vector3d::Zero()),
-        R(Eigen::Matrix3d::Identity())
+        R(Eigen::Matrix3d::Identity()),
+        omega(Eigen::Vector3d::Zero())
     { }
 
     // 将 update() 改名为 setState()
@@ -31,7 +33,8 @@ public:
                     Eigen::Vector3d _vb,
                     Eigen::Vector4d _q,
                     Eigen::Matrix3d _R,
-                    Eigen::Vector3d _euler)
+                    Eigen::Vector3d _euler,
+                    Eigen::Vector3d _omega)
     {
         p = _p;
         vi = _vi;
@@ -39,6 +42,7 @@ public:
         q = _q;
         R = _R;
         euler = _euler;
+        omega = _omega;
         updated = true;
     }
 };

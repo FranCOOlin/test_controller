@@ -9,7 +9,9 @@
     <!-- 启动 PX4 -->
     <arg name="uav_id" default="uav1"/>
     <arg name="simulation" default="true"/>
-    
+    <arg name="file_path" default="$(find test_controller)/json/myparams.json"/>
+    <arg name="controller_rate" default="200"/>
+    <arg name="observer_rate" default="300"/>
     <group unless="$(arg simulation)" ns="$(arg uav_id)">
         <include file="$(find mavros)/launch/px4.launch" >
             <arg name="fcu_url" value="$(arg fcu_url)" />
@@ -32,8 +34,18 @@
         <param name="controller_param" value="some_value" />
         <param name="simulation" value="$(arg simulation)" />
         <param name="uav_id" value="$(arg uav_id)" />
-    </node>
+        <param name="file_path" value="$(arg file_path)" />
+        <param name="controller_rate" value="$(arg controller_rate)" />
 
+    </node>
+    <!-- 启动 Observer 节点 -->
+    <node pkg="test_controller" type="observer" name="observer" output="screen">
+        <param name="observer_param" value="some_value" />
+        <param name="uav_id" value="$(arg uav_id)" />
+        <param name="simulation" value="$(arg simulation)" />
+        <param name="file_path" value="$(arg file_path)" />
+        <param name="observer_rate" value="$(arg observer_rate)" />
+    </node>
     <!-- 启动 Estimator 节点 -->
     <!-- <node pkg="test_controller" type="estimator" name="estimator" output="log">
         <param name="estimator_param" value="some_value" />

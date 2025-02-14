@@ -4,6 +4,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <test_controller/UAVState.h>
 #include <eigen3/Eigen/Dense>
+#include "test_controller/custom/myobserver.h"
 #include <deque>
 
 using namespace Eigen;

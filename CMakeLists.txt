@@ -144,6 +144,7 @@ add_executable(estimator src/estimator.cpp)
 add_executable(simulator src/simu.cpp)
 add_executable(odeint_example src/odeint_example.cpp src/integrator.cpp)
 add_executable(sin_publish src/sin_publisher.cpp)
+add_executable(observer src/observer.cpp)
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -179,6 +180,10 @@ target_link_libraries(
 )
 target_link_libraries(
   sin_publish
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(
+  observer
   ${catkin_LIBRARIES}
 )
 # target_link_libraries(

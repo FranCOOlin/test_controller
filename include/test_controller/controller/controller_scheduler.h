@@ -34,17 +34,16 @@ public:
 
   // run() 函数直接调用当前控制器的 update() 函数，不需要传入额外参数，
   // 并返回控制信号，其类型为 Eigen::VectorXd
-  Eigen::VectorXd run() {
+  void run() {
     if (controllers.empty()) {
       ROS_WARN("No controllers registered in ControllerScheduler.");
-      return Eigen::VectorXd();  // 返回空向量
     }
     int idx = current_mode;
     if (idx < 0 || idx >= static_cast<int>(controllers.size())) {
       ROS_WARN("Current mode %d is out of range. Using controller 0.", idx);
       idx = 0;
     }
-    return controllers[idx]->update();
+    controllers[idx]->update();
   }
 };
 

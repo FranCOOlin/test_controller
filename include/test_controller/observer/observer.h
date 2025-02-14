@@ -1,43 +1,37 @@
 #ifndef OBSERVER_OBSERVER_H
 #define OBSERVER_OBSERVER_H
 
-#include "common/integrator.h"
-#include "common/params.h"
-#include "common/state.h"
+#include "test_controller/common/params.h"
+#include "test_controller/common/measurement.h"
+#include "test_controller/common/state.h"
+#include "test_controller/common/integrator.hpp"
 #include <ros/ros.h>
+#include <eigen3/Eigen/Dense>
 
 namespace observer {
 
+// 抽象基类 Observer，统一保存 Params、State 引用。
+// update() 函数为纯虚函数，必须在派生类中实现，用于估计系统状态。
 class Observer {
 public:
-  common::Integrator* integrator;
+  int registerId;
+  double last_update_time;
+  Observer()
+    : registerId(-1), last_update_time(ros::Time::now().toSec())
+  { }
 
-  Observer() {
-    integrator = new common::Integrator();
-  }
-  ~Observer() {
-    delete integrator;
-  }
+  // 虚析构函数
+  virtual ~Observer() { }
 
-  // 模拟传感器数据读取
-  double readSensor() {
-    return 42.0;  // 示例返回值
-  }
+  // 纯虚函数 update()：用于估计系统状态，并根据需要更新 `state`
+  // 用户必须在派生类中实现此函数来定义具体的估计算法
+  virtual void update() = 0;
 
-  // 简单积分观测算法
-  double observe(double dt) {
-    double measurement = readSensor();
-    double observed = integrator->integrate(measurement, dt);
-    ROS_DEBUG("Observer: measurement=%f, observed=%f", measurement, observed);
-    return observed;
-  }
-
-  // 更新统一 State 中的 observer_state
-  void update(common::State* state, double dt, const common::Params* params) {
-    state->observer_state = observe(dt);
-  }
+  // 可选的，观测器初始化函数
+  virtual void initialize(){};
 };
 
 } // namespace observer
 
 #endif // OBSERVER_OBSERVER_H
+
