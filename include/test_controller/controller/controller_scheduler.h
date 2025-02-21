@@ -21,14 +21,14 @@ public:
   int registerController(Controller* ctrl) {
     controllers.push_back(ctrl);
     int index = controllers.size() - 1;
-    ctrl->registerId = index;
+    ctrl->register_id = index;
     ROS_INFO("Controller registered with id: %d, total controllers: %lu", index, controllers.size());
     return index;
   }
 
   // 切换当前 Controller：直接传入目标 Controller 对象的引用，调度器内部将 current_mode 设置为该对象的 registerId
   void switchController(Controller &ctrl) {
-    current_mode = ctrl.registerId;
+    current_mode = ctrl.register_id;
     ROS_INFO("Switched to controller with registerId: %d", current_mode);
   }
 

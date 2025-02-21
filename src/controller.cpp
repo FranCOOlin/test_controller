@@ -125,7 +125,7 @@ void controllerSWCallback(const std_msgs::Int32::ConstPtr &msg,
   switch (msg->data) {
   case 0:
     scheduler.switchController(*scheduler.controllers[0]);
-    ROS_INFO("Switched to controller with registerId: %d", scheduler.controllers[0]->registerId);
+    ROS_INFO("Switched to controller with register_id: %d", scheduler.controllers[0]->register_id);
     break;
   default:
     ROS_WARN("Invalid controller switch command: %d", msg->data);
@@ -133,7 +133,7 @@ void controllerSWCallback(const std_msgs::Int32::ConstPtr &msg,
   }
   
 }
-int sendCommand(const Eigen::VectorXd &command, ros::Publisher &local_rate_pub, ros::Publisher &local_thrust_pub)
+int sendCommandMavros(const Eigen::VectorXd &command, ros::Publisher &local_rate_pub, ros::Publisher &local_thrust_pub)
 {
   if(command.size() != 4){
     ROS_ERROR("Invalid control command: expected 4 elements, received %lu", command.size());
@@ -150,17 +150,16 @@ int sendCommand(const Eigen::VectorXd &command, ros::Publisher &local_rate_pub, 
   return 0;
 }
 
-// ---------- main() ----------
 int main(int argc, char **argv)
 {
   ros::init(argc, argv, "controller_node");
   ros::NodeHandle nh("");
-  // 读取参数
+  // 读取传入参数开始
   std::string uav_id;
   std::string file_path;
   bool simu;
   int controller_rate;
-  ros::param::get("~uav_id", uav_id);// 读取当前命名空间下的 uav_id
+  ros::param::get("~uav_id", uav_id);
   ros::param::get("~simulation", simu);
   ros::param::get("~file_path", file_path);
   ros::param::get("~controller_rate", controller_rate);
@@ -169,7 +168,7 @@ int main(int argc, char **argv)
     ROS_ERROR("uav_id not set");
     return -1;
   }
-
+  // 读取传入参数结束
 
   // 创建统一对象
   common::MyParams params;
@@ -196,7 +195,7 @@ int main(int argc, char **argv)
   // 初始化 ControllerScheduler 对象（栈变量），先注册 Controller，再调用 switchController
   controller::ControllerScheduler scheduler;
   scheduler.registerController(&myCtrl);
-  scheduler.switchController(myCtrl); // 直接传入 Controller 对象
+  scheduler.switchController(myCtrl);
 
   if(!simu){
     ROS_INFO("Experiment mode");
@@ -204,7 +203,7 @@ int main(int argc, char **argv)
     // 创建 MAVROS 服务客户端
     ros::ServiceClient set_mode_client = nh.serviceClient<mavros_msgs::SetMode>(uav_id + "mavros/set_mode");
     ros::ServiceClient arming_client = nh.serviceClient<mavros_msgs::CommandBool>(uav_id + "mavros/cmd/arming");
-    // Wait for the services to be available
+    // 等待services to be available
     ros::service::waitForService(uav_id + "/mavros/set_mode");
     ros::service::waitForService(uav_id + "/mavros/cmd/arming");
 
@@ -214,7 +213,7 @@ int main(int argc, char **argv)
     ros::Publisher local_thrust_pub = nh.advertise<mavros_msgs::Thrust>(uav_id + "/mavros/setpoint_attitude/thrust", 10);
     ros::Publisher control_pub = nh.advertise<test_controller::UAVCommand>(uav_id + "/control", 10);
 
-    // 订阅 MAVROS 状态话题，话题名称为 uav_id + "/mavros/state"，需要px4.launch也在uav_idgroup下
+    // 订阅 MAVROS 状态话题，话题名称为 uav_id + "/mavros/state"，需要px4.launch也在uav_id的ns下
     ros::Subscriber status_sub = nh.subscribe<mavros_msgs::State>(uav_id + "/mavros/state", 10, status_cb);
     
     // 订阅其它话题，使用 std::bind 和 std::ref 传入对象引用
@@ -227,11 +226,9 @@ int main(int argc, char **argv)
 
     // 利用 ROS 定时器实现 offboard/arming 切换，每 5 秒触发一次
     ros::Timer offboard_arm_timer = nh.createTimer(ros::Duration(5.0), std::bind(offboardArmCallback, std::placeholders::_1, std::ref(set_mode_client), std::ref(arming_client)));
-
+    // 设置循环执行频率
     ros::Rate Rate(controller_rate);
 
-    geometry_msgs::TwistStamped rate;
-    mavros_msgs::Thrust thrust;
     while (ros::ok())
     {
       ros::spinOnce();
@@ -243,7 +240,7 @@ int main(int argc, char **argv)
       control_signal(2) = control_input.omega(1);
       control_signal(3) = control_input.omega(2);
       // 发送控制指令
-      sendCommand(control_signal, local_rate_pub, local_thrust_pub);
+      sendCommandMavros(control_signal, local_rate_pub, local_thrust_pub);
       Rate.sleep();
     }
   }
@@ -252,11 +249,9 @@ int main(int argc, char **argv)
 
     // 初始化控制输入 Publisher
     ros::Publisher control_pub = nh.advertise<test_controller::UAVCommand>(uav_id + "/control", 10);
-
     ros::Subscriber state_sub_local = nh.subscribe<std_msgs::Float64MultiArray>(uav_id + "/state", 10, std::bind(simuStateCallback, std::placeholders::_1, std::ref(state)));
     
     // 订阅其它话题，使用 std::bind 和 std::ref 传入对象引用
-   
     ros::Subscriber traj_sub = nh.subscribe<std_msgs::Float64MultiArray>("trajectory", 10,
       std::bind(trajCallback, std::placeholders::_1, std::ref(trajectory)));
     ros::Subscriber traj_switch_sub = nh.subscribe<std_msgs::String>("trajswitch", 10,

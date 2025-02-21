@@ -10,14 +10,14 @@
 
 namespace observer {
 
-// 抽象基类 Observer，统一保存 Params、State 引用。
+// 抽象基类 Observer。
 // update() 函数为纯虚函数，必须在派生类中实现，用于估计系统状态。
 class Observer {
 public:
-  int registerId;
+  int register_id;
   double last_update_time;
   Observer()
-    : registerId(-1), last_update_time(ros::Time::now().toSec())
+    : register_id(-1), last_update_time(ros::Time::now().toSec())
   { }
 
   // 虚析构函数

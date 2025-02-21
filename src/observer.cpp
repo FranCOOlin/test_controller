@@ -72,7 +72,7 @@ int main(int argc, char **argv)
     // 初始化 ROS 节点
     ros::init(argc, argv, "observer_node");
     ros::NodeHandle nh;
-    // 读取参数
+    // 读取传入参数开始
     std::string uav_id;
     std::string file_path;
     bool simu;
@@ -81,6 +81,7 @@ int main(int argc, char **argv)
     ros::param::get("~simulation", simu);
     ros::param::get("~file_path", file_path);
     ros::param::get("~observer_rate", observer_rate);
+    // 读取传入参数结束
 
     // 创建一个话题发布者，发布类型为 test_controller::UAVState
     ros::Publisher pub = nh.advertise<test_controller::UAVState>("observer_topic", 10);
@@ -89,7 +90,6 @@ int main(int argc, char **argv)
     common::MyParams params;
     common::MyState state;
     common::MyMeasurement measurement;
-    common::MyTrajectory trajectory;
     common::MyControlInput control_input;
 
     // 加载参数文件
@@ -98,13 +98,6 @@ int main(int argc, char **argv)
         ROS_ERROR("Failed to load parameters from file.");
         return -1;
     }
-
-    // 打印加载的参数（仅示例）
-    ROS_INFO("Loaded parameters:");
-    ROS_INFO("observer/kp = %f", params.kp);
-    ROS_INFO("observer/kv = %f", params.kv);
-    ROS_INFO("observer/kr = %f", params.kr);
-    ROS_INFO("observer/hr = %f", params.hr);
 
     // 初始化 MyObserver 对象（作为 Observer 的派生类）
     observer::MyObserver myObs(params, state, measurement, control_input, simu);
@@ -124,7 +117,6 @@ int main(int argc, char **argv)
         ros::Subscriber feedback_sub = nh.subscribe<geometry_msgs::PoseStamped>(nokov_topic, 10, std::bind(feedbackCallback, std::placeholders::_1, std::ref(measurement)));
         
         // 订阅其它话题，使用 std::bind 和 std::ref 传入对象引用
-        // 这里直接传 Controller 对象引用
         ros::Subscriber observer_sw_sub = nh.subscribe<std_msgs::Int32>(uav_id + "observer_sw", 10,
         std::bind(observerSWCallback, std::placeholders::_1, std::ref(scheduler)));
 
@@ -157,7 +149,6 @@ int main(int argc, char **argv)
         ros::Subscriber feedback_sub = nh.subscribe<test_controller::UAVState>(feedback_topic, 10, std::bind(simuFeedbackCallback, std::placeholders::_1, std::ref(measurement)));
         
         // 订阅其它话题，使用 std::bind 和 std::ref 传入对象引用
-        // 这里直接传 Controller 对象引用
         ros::Subscriber observer_sw_sub = nh.subscribe<std_msgs::Int32>(uav_id + "observer_sw", 10,
         std::bind(observerSWCallback, std::placeholders::_1, std::ref(scheduler)));
 

@@ -26,7 +26,7 @@ public:
         ros::param::get("~uav_id", uav_id);// 读取当前命名空间下的 uav_id
         if (uav_id.empty()) {
             ROS_ERROR("uav_id not set");
-            return -1;
+            return false;
         }
         if (!nh.getParam(uav_id+"controller/kp", kp)) {
             ROS_WARN("Failed to get parameter: controller/kp");

@@ -40,3 +40,4 @@ if __name__ == "__main__":
         reboot_px4()
     except rospy.ROSInterruptException:
         pass
+    
