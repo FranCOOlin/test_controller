@@ -9,9 +9,9 @@
         "${workspaceFolder}/**",
         "/opt/ros/noetic/include/**",
         "/opt/ros/noetic/include/ros/**",
-        "/home/fran/catkin_ws/devel/include/**",
-        "/home/fran/catkin_ws/src/ros_publish_subscribe_latency_test/include/**",
-        "/home/fran/catkin_ws/src/test_controller/include/**",
+        "${workspaceFolder}/devel/include/**",
+        "${workspaceFolder}/src/ros_publish_subscribe_latency_test/include/**",
+        "${workspaceFolder}/src/test_controller/include/**",
         "/usr/include/**",
         "/usr/local/include/**"
       ],
