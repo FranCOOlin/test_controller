@@ -5,7 +5,6 @@ from mavros_msgs.srv import CommandLong as CommandLongSrv
 
 def reboot_px4():
     rospy.init_node('reboot_px4_node', anonymous=True)
-
     # 等待 mavros 服务
     rospy.wait_for_service('/mavros/cmd/command')
     try:

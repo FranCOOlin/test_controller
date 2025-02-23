@@ -83,6 +83,7 @@ void stateCallback(const std_msgs::Float64MultiArray::ConstPtr &msg, common::MyS
   state.R = Eigen::Quaterniond(state.q(0), state.q(1), state.q(2), state.q(3)).toRotationMatrix(); //q: w x y z
   state.euler = state.R.eulerAngles(2, 1, 0);
   state.updated = true;
+  bool updated = state.updated;
   // state.setState(state_vector.segment(0, 3), state_vector.segment(3, 3), state_vector.segment(6, 3),);
   // ROS_INFO("Control state updated: pos = %f", state.controller_pos);
 }
@@ -191,7 +192,6 @@ int main(int argc, char **argv)
 
   // 初始化 MyController 对象（作为 Controller 的派生类），传入对象引用及用户自定义控制函数 myControlFunction
   controller::MyController myCtrl(params, state, trajectory, control_input);
-  
   // 初始化 ControllerScheduler 对象（栈变量），先注册 Controller，再调用 switchController
   controller::ControllerScheduler scheduler;
   scheduler.registerController(&myCtrl);
@@ -217,12 +217,13 @@ int main(int argc, char **argv)
     ros::Subscriber status_sub = nh.subscribe<mavros_msgs::State>(uav_id + "/mavros/state", 10, status_cb);
     
     // 订阅其它话题，使用 std::bind 和 std::ref 传入对象引用
+
     ros::Subscriber state_sub_local = nh.subscribe<std_msgs::Float64MultiArray>(uav_id+"/state", 10, std::bind(stateCallback, std::placeholders::_1, std::ref(state)));
-    ros::Subscriber traj_sub = nh.subscribe<std_msgs::Float64MultiArray>("trajectory", 10, std::bind(trajCallback, std::placeholders::_1, std::ref(trajectory)));
+    ros::Subscriber traj_sub = nh.subscribe<std_msgs::Float64MultiArray>("trajectory", 10, std::bind(trajCallback, std::placeholders::_1, std::ref(myCtrl. trajectory)));
     ros::Subscriber traj_switch_sub = nh.subscribe<std_msgs::String>("trajswitch", 10, std::bind(trajSwitchCallback, std::placeholders::_1, std::ref(trajectory)));
     // 这里直接传 Controller 对象引用
     ros::Subscriber controller_sw_sub = nh.subscribe<std_msgs::Int32>("controller_sw", 10, std::bind(controllerSWCallback, std::placeholders::_1, std::ref(scheduler)));
-
+    
 
     // 利用 ROS 定时器实现 offboard/arming 切换，每 5 秒触发一次
     ros::Timer offboard_arm_timer = nh.createTimer(ros::Duration(5.0), std::bind(offboardArmCallback, std::placeholders::_1, std::ref(set_mode_client), std::ref(arming_client)));

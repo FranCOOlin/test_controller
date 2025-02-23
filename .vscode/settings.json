@@ -7,6 +7,7 @@
         "/home/fran/catkin_ws/devel/lib/python3/dist-packages",
         "/opt/ros/noetic/lib/python3/dist-packages"
     ],
+    // "C_Cpp.intelliSenseEngine": "Tag Parser",
     "files.associations": {
         "*.m": "matlab",
         "*.mlx": "matlab",
@@ -69,6 +70,8 @@
         "variant": "cpp",
         "bit": "cpp",
         "*.ipp": "cpp",
-        "valarray": "cpp"
-    }
+        "valarray": "cpp",
+        "dense": "cpp"
+    },
+    "C_Cpp.default.intelliSenseMode": "linux-gcc-x64"
 }
