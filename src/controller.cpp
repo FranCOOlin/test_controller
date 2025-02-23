@@ -218,9 +218,9 @@ int main(int argc, char **argv)
     
     // 订阅其它话题，使用 std::bind 和 std::ref 传入对象引用
 
-    ros::Subscriber state_sub_local = nh.subscribe<std_msgs::Float64MultiArray>(uav_id+"/state", 10, std::bind(stateCallback, std::placeholders::_1, std::ref(state)));
-    ros::Subscriber traj_sub = nh.subscribe<std_msgs::Float64MultiArray>("trajectory", 10, std::bind(trajCallback, std::placeholders::_1, std::ref(myCtrl. trajectory)));
-    ros::Subscriber traj_switch_sub = nh.subscribe<std_msgs::String>("trajswitch", 10, std::bind(trajSwitchCallback, std::placeholders::_1, std::ref(trajectory)));
+    ros::Subscriber state_sub_local = nh.subscribe<std_msgs::Float64MultiArray>(uav_id+"/state", 10, std::bind(stateCallback, std::placeholders::_1, std::ref(myCtrl.state)));
+    ros::Subscriber traj_sub = nh.subscribe<std_msgs::Float64MultiArray>("trajectory", 10, std::bind(trajCallback, std::placeholders::_1, std::ref(myCtrl.trajectory)));
+    ros::Subscriber traj_switch_sub = nh.subscribe<std_msgs::String>("trajswitch", 10, std::bind(trajSwitchCallback, std::placeholders::_1, std::ref(myCtrl.trajectory)));
     // 这里直接传 Controller 对象引用
     ros::Subscriber controller_sw_sub = nh.subscribe<std_msgs::Int32>("controller_sw", 10, std::bind(controllerSWCallback, std::placeholders::_1, std::ref(scheduler)));
     
@@ -250,13 +250,13 @@ int main(int argc, char **argv)
 
     // 初始化控制输入 Publisher
     ros::Publisher control_pub = nh.advertise<test_controller::UAVCommand>(uav_id + "/control", 10);
-    ros::Subscriber state_sub_local = nh.subscribe<std_msgs::Float64MultiArray>(uav_id + "/state", 10, std::bind(simuStateCallback, std::placeholders::_1, std::ref(state)));
+    ros::Subscriber state_sub_local = nh.subscribe<std_msgs::Float64MultiArray>(uav_id + "/state", 10, std::bind(simuStateCallback, std::placeholders::_1, std::ref(myCtrl.state)));
     
     // 订阅其它话题，使用 std::bind 和 std::ref 传入对象引用
     ros::Subscriber traj_sub = nh.subscribe<std_msgs::Float64MultiArray>("trajectory", 10,
-      std::bind(trajCallback, std::placeholders::_1, std::ref(trajectory)));
+      std::bind(trajCallback, std::placeholders::_1, std::ref(myCtrl.trajectory)));
     ros::Subscriber traj_switch_sub = nh.subscribe<std_msgs::String>("trajswitch", 10,
-      std::bind(trajSwitchCallback, std::placeholders::_1, std::ref(trajectory)));
+      std::bind(trajSwitchCallback, std::placeholders::_1, std::ref(myCtrl.trajectory)));
     // 这里直接传 Controller 对象引用
     ros::Subscriber controller_sw_sub = nh.subscribe<std_msgs::Int32>("controller_sw", 10,
       std::bind(controllerSWCallback, std::placeholders::_1, std::ref(scheduler)));

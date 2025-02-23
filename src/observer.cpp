@@ -114,7 +114,7 @@ int main(int argc, char **argv)
         ros::Publisher observe_pub = nh.advertise<std_msgs::Float64MultiArray>(uav_id + "/state", 10);
         // 订阅动捕反馈话题
         std::string nokov_topic = "/vrpn_client_node/" + uav_id + "/pose";
-        ros::Subscriber feedback_sub = nh.subscribe<geometry_msgs::PoseStamped>(nokov_topic, 10, std::bind(feedbackCallback, std::placeholders::_1, std::ref(measurement)));
+        ros::Subscriber feedback_sub = nh.subscribe<geometry_msgs::PoseStamped>(nokov_topic, 10, std::bind(feedbackCallback, std::placeholders::_1, std::ref(myObs.measurement)));
         
         // 订阅其它话题，使用 std::bind 和 std::ref 传入对象引用
         ros::Subscriber observer_sw_sub = nh.subscribe<std_msgs::Int32>(uav_id + "observer_sw", 10,
@@ -146,7 +146,7 @@ int main(int argc, char **argv)
         ros::Publisher observe_pub = nh.advertise<std_msgs::Float64MultiArray>(uav_id + "/state", 10);
         // 订阅反馈话题
         std::string feedback_topic = uav_id + "/feedback";
-        ros::Subscriber feedback_sub = nh.subscribe<test_controller::UAVState>(feedback_topic, 10, std::bind(simuFeedbackCallback, std::placeholders::_1, std::ref(measurement)));
+        ros::Subscriber feedback_sub = nh.subscribe<test_controller::UAVState>(feedback_topic, 10, std::bind(simuFeedbackCallback, std::placeholders::_1, std::ref(myObs.measurement)));
         
         // 订阅其它话题，使用 std::bind 和 std::ref 传入对象引用
         ros::Subscriber observer_sw_sub = nh.subscribe<std_msgs::Int32>(uav_id + "observer_sw", 10,
