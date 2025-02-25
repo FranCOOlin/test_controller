@@ -162,7 +162,7 @@ public:
         state.omega = omega;
         state.euler = R.eulerAngles(2, 1, 0);
         // ROS_INFO("Observer updated: vel = [%f, %f, %f]", state.vi(0), state.vi(1), state.vi(2));
-        ROS_INFO("Observer updated: pos = [%f, %f, %f]", state.p(0), state.p(1), state.p(2));
+        // ROS_INFO("Observer updated: pos = [%f, %f, %f]", state.p(0), state.p(1), state.p(2));
         // 从std::vector<double>转换为state
         // state.p = Eigen::VectorXd::Map(int_vec.data(), 3);
         // state.q = Eigen::VectorXd::Map(int_vec.data()+3, 4);

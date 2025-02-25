@@ -56,7 +56,7 @@ void offboardArmCallback(const ros::TimerEvent &event,
       ROS_INFO("OFFBOARD enabled");
     }
   }
-  else if (current_state.mode == "OFFBOARD" && !current_state.armed) {
+  if (current_state.mode == "OFFBOARD" && !current_state.armed) {
     ROS_INFO("Arming vehicle");
     mavros_msgs::CommandBool arm_cmd;
     arm_cmd.request.value = true;
@@ -85,7 +85,7 @@ void stateCallback(const std_msgs::Float64MultiArray::ConstPtr &msg, common::MyS
   state.updated = true;
   bool updated = state.updated;
   // state.setState(state_vector.segment(0, 3), state_vector.segment(3, 3), state_vector.segment(6, 3),);
-  // ROS_INFO("Control state updated: pos = %f", state.controller_pos);
+  // ROS_INFO("Control state updated: pos = %f,%f,%f", state.p(0),state.p(1),state.p(2));
 }
 void simuStateCallback(const std_msgs::Float64MultiArray::ConstPtr &msg, common::MyState &state)
 {
@@ -148,6 +148,7 @@ int sendCommandMavros(const Eigen::VectorXd &command, ros::Publisher &local_rate
   rate.twist.angular.z = command(3);
   local_rate_pub.publish(rate);
   local_thrust_pub.publish(thrust);
+  // ROS_INFO("Control thrust updated: thrust = %f",thrust.thrust);
   return 0;
 }
 
@@ -201,8 +202,8 @@ int main(int argc, char **argv)
     ROS_INFO("Experiment mode");
 
     // 创建 MAVROS 服务客户端
-    ros::ServiceClient set_mode_client = nh.serviceClient<mavros_msgs::SetMode>(uav_id + "mavros/set_mode");
-    ros::ServiceClient arming_client = nh.serviceClient<mavros_msgs::CommandBool>(uav_id + "mavros/cmd/arming");
+    ros::ServiceClient set_mode_client = nh.serviceClient<mavros_msgs::SetMode>(uav_id + "/mavros/set_mode");
+    ros::ServiceClient arming_client = nh.serviceClient<mavros_msgs::CommandBool>(uav_id + "/mavros/cmd/arming");
     // 等待services to be available
     ros::service::waitForService(uav_id + "/mavros/set_mode");
     ros::service::waitForService(uav_id + "/mavros/cmd/arming");
@@ -219,10 +220,10 @@ int main(int argc, char **argv)
     // 订阅其它话题，使用 std::bind 和 std::ref 传入对象引用
 
     ros::Subscriber state_sub_local = nh.subscribe<std_msgs::Float64MultiArray>(uav_id+"/state", 10, std::bind(stateCallback, std::placeholders::_1, std::ref(myCtrl.state)));
-    ros::Subscriber traj_sub = nh.subscribe<std_msgs::Float64MultiArray>("trajectory", 10, std::bind(trajCallback, std::placeholders::_1, std::ref(myCtrl.trajectory)));
-    ros::Subscriber traj_switch_sub = nh.subscribe<std_msgs::String>("trajswitch", 10, std::bind(trajSwitchCallback, std::placeholders::_1, std::ref(myCtrl.trajectory)));
+    ros::Subscriber traj_sub = nh.subscribe<std_msgs::Float64MultiArray>(uav_id+"/trajectory", 10, std::bind(trajCallback, std::placeholders::_1, std::ref(myCtrl.trajectory)));
+    ros::Subscriber traj_switch_sub = nh.subscribe<std_msgs::String>(uav_id+"/trajswitch", 10, std::bind(trajSwitchCallback, std::placeholders::_1, std::ref(myCtrl.trajectory)));
     // 这里直接传 Controller 对象引用
-    ros::Subscriber controller_sw_sub = nh.subscribe<std_msgs::Int32>("controller_sw", 10, std::bind(controllerSWCallback, std::placeholders::_1, std::ref(scheduler)));
+    ros::Subscriber controller_sw_sub = nh.subscribe<std_msgs::Int32>(uav_id+"/controller_sw", 10, std::bind(controllerSWCallback, std::placeholders::_1, std::ref(scheduler)));
     
 
     // 利用 ROS 定时器实现 offboard/arming 切换，每 5 秒触发一次

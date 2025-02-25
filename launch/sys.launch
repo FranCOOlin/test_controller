@@ -1,17 +1,17 @@
 <launch>
     <arg name="fcu_url" default="/dev/ttyUSB0:1000000" />
     <arg name="gcs_url" default="" />
-    <arg name="tgt_system" default="187" />
+    <arg name="tgt_system" default="1" />
     <arg name="tgt_component" default="1" />
     <arg name="log_output" default="screen" />
     <arg name="fcu_protocol" default="v2.0" />
     <arg name="respawn_mavros" default="false" />
     <!-- 启动 PX4 -->
-    <arg name="uav_id" default="uav1"/>
-    <arg name="simulation" default="true"/>
+    <arg name="uav_id" default="XMM1"/>
+    <arg name="simulation" default="false"/>
     <arg name="file_path" default="$(find test_controller)/json/myparams.json"/>
     <arg name="controller_rate" default="200"/>
-    <arg name="observer_rate" default="300"/>
+    <arg name="observer_rate" default="200"/>
     <group unless="$(arg simulation)" ns="$(arg uav_id)">
         <include file="$(find mavros)/launch/px4.launch" >
             <arg name="fcu_url" value="$(arg fcu_url)" />
