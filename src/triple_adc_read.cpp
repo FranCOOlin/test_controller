@@ -32,18 +32,36 @@ int main(int argc, char **argv)
     // 创建订阅者，订阅 "input_topic" 话题
     ros::Subscriber sub = nh.subscribe("input_topic", 10, chatterCallback);
 
-    ros::Rate loop_rate(10);  // 10 Hz
+    ros::Rate loop_rate(200);  // 10 Hz
 
     DEV_HARDWARE_SPI_begin(spi_device);
     DEV_GPIO_INIT(DEV_GPIO26, DEV_GPIO_OUTPUT,0);
-    ADS1263 adc1(DEV_GPIO22, DEV_GPIO27);
-    adc1.initADC1(ADS1263_20SPS);
+    ADS1263 adc1(DEV_GPIO22, DEV_GPIO27,1.25);
+    // adc1.initADC1(ADS1263_20SPS);
+    adc1.softReset();
+    adc1.calibrate();
+    adc1.setDelayPulseMode();
+    adc1.setGainRate();
+    adc1.setFilter();
+    adc1.setMode(1);
+    adc1.setDiffChannal(0);
+
     
     while (ros::ok())
     {
         ros::spinOnce();
         DEV_GPIO_Write(DEV_GPIO26, 1);
-        adc1.softReset();
+        adc1.waitDRDY();
+        UDOUBLE value = adc1.readADC1Data();
+        double v;
+        if(value>>31 == 1){
+            v = adc1.REF*2 + value * -adc1.REF / 0x80000000;
+        }
+        else{
+            v = value * -adc1.REF / 0x80000000;
+        }
+        ROS_INFO("ADC1 Value: %lf", v);
+        DEV_GPIO_Write(DEV_GPIO26, 0);
         loop_rate.sleep();
     }
 

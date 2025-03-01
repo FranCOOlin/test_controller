@@ -157,8 +157,9 @@ class ADS1263 {
 public:
     int DEV_CS_PIN;
     int DEV_DRDY_PIN;
+    double REF;
     // 构造函数：接收片选引脚编号,并初始化
-    ADS1263(int CS_PIN,int DRDY_PIN) : DEV_CS_PIN(CS_PIN),DEV_DRDY_PIN(DRDY_PIN) {
+    ADS1263(int CS_PIN,int DRDY_PIN,double _REF) : DEV_CS_PIN(CS_PIN),DEV_DRDY_PIN(DRDY_PIN),REF(_REF) {
         DEV_GPIO_INIT(DEV_CS_PIN, DEV_GPIO_OUTPUT, DEV_GPIO_HIGH);
         DEV_GPIO_INIT(DEV_DRDY_PIN, DEV_GPIO_INPUT, DEV_GPIO_LOW);
     }

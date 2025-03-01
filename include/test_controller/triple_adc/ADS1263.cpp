@@ -75,7 +75,7 @@ void ADS1263::waitDRDY(void)
         if(DEV_GPIO_Read(DEV_DRDY_PIN) == DEV_GPIO_LOW)
             break;
         if(i >= 4000000) {
-            ROS_INFO("Time Out ...\r\n");
+            ROS_INFO("Time Out ...");
             break;
         }
         i++;
@@ -119,33 +119,33 @@ void ADS1263::configADC1(ADS1263_GAIN gain, ADS1263_DRATE drate, ADS1263_DELAY d
     writeReg(REG_MODE2, MODE2);
     DEV_Delay_ms(1);
     if(readData(REG_MODE2) == MODE2)
-        printf("REG_MODE2 success \r\n");
+        ROS_INFO("REG_MODE2 success ");
     else
-        printf("REG_MODE2 unsuccess \r\n");
+        ROS_INFO("REG_MODE2 unsuccess ");
     
     UBYTE REFMUX = 0x24;        // 0x24: VDD,VSS as REF
     writeReg(REG_REFMUX, REFMUX);
     DEV_Delay_ms(1);
     if(readData(REG_REFMUX) == REFMUX)
-        printf("REG_REFMUX success \r\n");
+        ROS_INFO("REG_REFMUX success ");
     else
-        printf("REG_REFMUX unsuccess \r\n");
+        ROS_INFO("REG_REFMUX unsuccess ");
     
     UBYTE MODE0 = delay;
     writeReg(REG_MODE0, MODE0); 
     DEV_Delay_ms(1);
     if(readData(REG_MODE0) == MODE0)
-        printf("REG_MODE0 success \r\n");
+        ROS_INFO("REG_MODE0 success ");
     else
-        printf("REG_MODE0 unsuccess \r\n");
+        ROS_INFO("REG_MODE0 unsuccess ");
     
     UBYTE MODE1 = 0x84; // 0x84: FIR digital filter
     writeReg(REG_MODE1, MODE1); 
     DEV_Delay_ms(1);
     if(readData(REG_MODE1) == MODE1)
-        printf("REG_MODE1 success \r\n");
+        ROS_INFO("REG_MODE1 success ");
     else
-        printf("REG_MODE1 unsuccess \r\n");
+        ROS_INFO("REG_MODE1 unsuccess ");
 }
 
 /***************************************
@@ -160,17 +160,17 @@ void ADS1263::configADC2(ADS1263_ADC2_GAIN gain, ADS1263_ADC2_DRATE drate, ADS12
     writeReg(REG_ADC2CFG, ADC2CFG);
     DEV_Delay_ms(1);
     if(readData(REG_ADC2CFG) == ADC2CFG)
-        printf("REG_ADC2CFG success \r\n");
+        ROS_INFO("REG_ADC2CFG success ");
     else
-        printf("REG_ADC2CFG unsuccess \r\n");
+        ROS_INFO("REG_ADC2CFG unsuccess ");
     
     UBYTE MODE0 = delay;
     writeReg(REG_MODE0, MODE0); 
     DEV_Delay_ms(1);
     if(readData(REG_MODE0) == MODE0)
-        printf("REG_MODE0 success \r\n");
+        ROS_INFO("REG_MODE0 success ");
     else
-        printf("REG_MODE0 unsuccess \r\n");
+        ROS_INFO("REG_MODE0 unsuccess ");
 }
 
 /***************************************
@@ -182,9 +182,9 @@ UBYTE ADS1263::initADC1(ADS1263_DRATE rate)
 {
     softReset();
     if(readChipID() == 0) {
-        ROS_INFO("ID Read success \r\n");
+        ROS_INFO("ID Read success ");
     } else {
-        ROS_INFO("ID Read failed \r\n");
+        ROS_INFO("ID Read failed ");
         return 1;
     }
     softStop();
@@ -202,9 +202,9 @@ UBYTE ADS1263::initADC2(ADS1263_ADC2_DRATE rate)
 {
     softReset();
     if(readChipID() == 1) {
-        printf("ID Read success \r\n");
+        ROS_INFO("ID Read success ");
     } else {
-        printf("ID Read failed \r\n");
+        ROS_INFO("ID Read failed ");
         return 1;
     }
     writeCmd(CMD_STOP2);
@@ -224,7 +224,7 @@ void ADS1263::setChannal(UBYTE Channal)
     UBYTE INPMUX = (Channal << 4) | 0x0a; // 0x0a: VCOM 作为负输入
     writeReg(REG_INPMUX, INPMUX);
     if(readData(REG_INPMUX) != INPMUX)
-        printf("setChannal unsuccess \r\n");
+        ROS_INFO("setChannal unsuccess ");
 }
 
 /***************************************
@@ -239,7 +239,7 @@ void ADS1263::setChannal_ADC2(UBYTE Channal)
     UBYTE INPMUX = (Channal << 4) | 0x0a;
     writeReg(REG_ADC2MUX, INPMUX);
     if(readData(REG_ADC2MUX) != INPMUX)
-        printf("setChannal_ADC2 unsuccess \r\n");
+        ROS_INFO("setChannal_ADC2 unsuccess ");
 }
 
 /***************************************
@@ -262,7 +262,7 @@ void ADS1263::setDiffChannal(UBYTE Channal)
         INPMUX = (8 << 4) | 9;    // AIN8-AIN9
     writeReg(REG_INPMUX, INPMUX);
     if(readData(REG_INPMUX) != INPMUX)
-        printf("setDiffChannal unsuccess \r\n");
+        ROS_INFO("setDiffChannal unsuccess ");
 }
 
 /***************************************
@@ -285,7 +285,7 @@ void ADS1263::setDiffChannal_ADC2(UBYTE Channal)
         INPMUX = (8 << 4) | 9;
     writeReg(REG_ADC2MUX, INPMUX);
     if(readData(REG_ADC2MUX) != INPMUX)
-        printf("setDiffChannal_ADC2 unsuccess \r\n");
+        ROS_INFO("setDiffChannal_ADC2 unsuccess ");
 }
 
 /***************************************
@@ -314,7 +314,7 @@ UDOUBLE ADS1263::readADC1Data(void)
     read |= ((UDOUBLE)buf[2] << 8);
     read |= (UDOUBLE)buf[3];
     if(checkSum(read, CRC) != 0)
-        printf("ADC1 Data read error! \r\n");
+        ROS_INFO("ADC1 Data read error! ");
     return read;
 }
 
@@ -343,7 +343,7 @@ UDOUBLE ADS1263::readADC2Data(void)
     read |= ((UDOUBLE)buf[1] << 8);
     read |= (UDOUBLE)buf[2];
     if(checkSum(read, CRC) != 0)
-        printf("ADC2 Data read error! \r\n");
+        ROS_INFO("ADC2 Data read error! ");
     return read;
 }
 
@@ -439,14 +439,12 @@ void ADS1263::calibrate(void){
     MODE2 |= (ADS1263_GAIN_32 << 4) | ADS1263_20SPS;
     writeReg(REG_MODE2, MODE2);
     if(readData(REG_MODE2) == MODE2){
-
-
         ROS_INFO("REG_MODE2 success");
     }
     else{
         ROS_INFO("REG_MODE2 unsuccess");
     }
-    UBYTE REFMUX = 0x12;   //0x00:+-2.5V as REF, 0x24:VDD,VSS as REF
+    UBYTE REFMUX = 0x12;   //AIN2 - AIN3 as REF
     writeReg(REG_REFMUX, REFMUX);
     if(readData(REG_REFMUX) == REFMUX){
     ROS_INFO("REG_REFMUX success");
@@ -472,7 +470,45 @@ void ADS1263::calibrate(void){
 
 
 }
-void ADS1263::setGainRate(void){}
-void ADS1263::setDelay(void){}
-void ADS1263::setFilter(void){}
-void ADS1263::setDelayPulseMode(void){}
+void ADS1263::setGainRate(void){
+    UDOUBLE MODE2 = 0x00;    // 0x80:PGA bypassed, 0x00:PGA enabled
+    MODE2 |= (ADS1263_GAIN_32 << 4) | ADS1263_1200SPS;
+    writeReg(REG_MODE2, MODE2);
+    if(readData(REG_MODE2) == MODE2){
+        ROS_INFO("REG_MODE2 success");
+    }
+    else{
+        ROS_INFO("REG_MODE2 unsuccess");
+    }
+}
+void ADS1263::setDelay(void){
+    UBYTE MODE0 = ADS1263_DELAY_0s;
+    writeReg(REG_MODE0, MODE0);
+    if(readData(REG_MODE0) == MODE0){
+        ROS_INFO("REG_MODE0 success");
+    }
+    else{
+        ROS_INFO("REG_MODE0 unsuccess");
+    }
+}
+void ADS1263::setFilter(void){
+    UBYTE MODE1 = 0x60;    // Digital Filter; 0x84:FIR, 0x64:Sinc4, 0x44:Sinc3, 0x24:Sinc2, 0x04:Sinc1
+    writeReg(REG_MODE1, MODE1);
+    if(readData(REG_MODE1) == MODE1){
+        ROS_INFO("REG_MODE1 success");
+    }
+    else{
+        ROS_INFO("REG_MODE1 unsuccess");
+    }
+}
+void ADS1263::setDelayPulseMode(void){
+    UBYTE MODE0 = ADS1263_DELAY_0s;
+    MODE0 = MODE0 | 0x40;
+    writeReg(REG_MODE0, MODE0);
+    if(readData(REG_MODE0)== MODE0){
+        ROS_INFO("REG_MODE0 success");
+    }
+    else{
+        ROS_INFO("REG_MODE0 unsuccess");
+    }
+}
