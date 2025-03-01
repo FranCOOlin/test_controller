@@ -1,6 +1,8 @@
 #include <ros/ros.h>
 #include <std_msgs/String.h>
 #include <test_controller/Float64MultiArrayWithHeader.h>
+#include <std_msgs/Float64MultiArray.h>
+#include <geometry_msgs/Vector3Stamped.h>
 
 #include "test_controller/triple_adc/dev_gpio.h"
 #include "test_controller/triple_adc/dev_hardware_spi.h"
@@ -35,10 +37,11 @@ int main(int argc, char **argv)
     // }
 
     // 创建发布者，发布到 "output_topic" 话题
-    pub = nh.advertise<test_controller::Float64MultiArrayWithHeader>(uav_id+"/triple_adc_value", 10);
+    // pub = nh.advertise<test_controller::Float64MultiArrayWithHeader>(uav_id+"/triple_adc_value", 10);
+    pub = nh.advertise<geometry_msgs::Vector3Stamped>(uav_id+"/triple_adc_value", 10);
 
     
-    ros::Rate loop_rate(200);  // 10 Hz
+    ros::Rate loop_rate(100);  // 10 Hz
 
     DEV_HARDWARE_SPI_begin(spi_device);
     int START_PIN = DEV_GPIO26;
@@ -48,12 +51,12 @@ int main(int argc, char **argv)
     ADS1263 adc3(DEV_GPIO24, DEV_GPIO29,1.25);
 
 
+    geometry_msgs::Vector3Stamped msg;
 
     
     while (ros::ok())
     {
         ros::spinOnce();
-        test_controller::Float64MultiArrayWithHeader msg;
         DEV_GPIO_Write(START_PIN, DEV_GPIO_HIGH);
         adc1.waitDRDY();
         double value1 = adc1.readADC1Data();
@@ -61,9 +64,12 @@ int main(int argc, char **argv)
         double value3 = adc3.readADC1Data();
         ROS_INFO("ADC1 Value: %+5f, ADC2 Value: %+5f, ADC3 Value: %+5f", value1, value2, value3);
         msg.header.stamp = ros::Time::now();
-        msg.state.data.push_back(value1);
-        msg.state.data.push_back(value2);
-        msg.state.data.push_back(value3);
+        msg.vector.x=value1;
+        msg.vector.y=value2;
+        msg.vector.z=value3;
+        // msg.state.data.push_back(value1);
+        // msg.state.data.push_back(value2);
+        // msg.state.data.push_back(value3);
         pub.publish(msg);
         DEV_GPIO_Write(START_PIN, DEV_GPIO_LOW);
         loop_rate.sleep();
