@@ -292,9 +292,9 @@ void ADS1263::setDiffChannal_ADC2(UBYTE Channal)
 * 函数: readADC1Data
 * 功能: 读取 ADC1 数据（4 字节数据）
 ***************************************/
-UDOUBLE ADS1263::readADC1Data(void)
+double ADS1263::readADC1Data(void)
 {
-    UDOUBLE read = 0;
+    int read = 0;
     UBYTE buf[4] = {0};
     UBYTE Status, CRC;
     DEV_GPIO_Write(DEV_CS_PIN, 0);
@@ -315,7 +315,14 @@ UDOUBLE ADS1263::readADC1Data(void)
     read |= (UDOUBLE)buf[3];
     if(checkSum(read, CRC) != 0)
         ROS_INFO("ADC1 Data read error! ");
-    return read;
+    double v;
+    if(read>>31 == 1){
+        v = REF*2 - read * REF / 0x80000000;
+    }
+    else{
+        v = -read * REF / 0x7fffffff;
+    }
+    return v;
 }
 
 /***************************************
@@ -472,7 +479,7 @@ void ADS1263::calibrate(void){
 }
 void ADS1263::setGainRate(void){
     UDOUBLE MODE2 = 0x00;    // 0x80:PGA bypassed, 0x00:PGA enabled
-    MODE2 |= (ADS1263_GAIN_32 << 4) | ADS1263_1200SPS;
+    MODE2 |= (ADS1263_GAIN_32 << 4) | ADS1263_400SPS;
     writeReg(REG_MODE2, MODE2);
     if(readData(REG_MODE2) == MODE2){
         ROS_INFO("REG_MODE2 success");
@@ -492,7 +499,7 @@ void ADS1263::setDelay(void){
     }
 }
 void ADS1263::setFilter(void){
-    UBYTE MODE1 = 0x60;    // Digital Filter; 0x84:FIR, 0x64:Sinc4, 0x44:Sinc3, 0x24:Sinc2, 0x04:Sinc1
+    UBYTE MODE1 = 0x00;    // Digital Filter; 0x84:FIR, 0x64:Sinc4, 0x44:Sinc3, 0x24:Sinc2, 0x04:Sinc1
     writeReg(REG_MODE1, MODE1);
     if(readData(REG_MODE1) == MODE1){
         ROS_INFO("REG_MODE1 success");
@@ -511,4 +518,13 @@ void ADS1263::setDelayPulseMode(void){
     else{
         ROS_INFO("REG_MODE0 unsuccess");
     }
+}
+void ADS1263::Init(void){
+    softReset();
+    calibrate();
+    setDelayPulseMode();
+    setGainRate();
+    setFilter();
+    setMode(1);
+    setDiffChannal(0);
 }

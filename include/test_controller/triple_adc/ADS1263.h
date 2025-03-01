@@ -162,6 +162,7 @@ public:
     ADS1263(int CS_PIN,int DRDY_PIN,double _REF) : DEV_CS_PIN(CS_PIN),DEV_DRDY_PIN(DRDY_PIN),REF(_REF) {
         DEV_GPIO_INIT(DEV_CS_PIN, DEV_GPIO_OUTPUT, DEV_GPIO_HIGH);
         DEV_GPIO_INIT(DEV_DRDY_PIN, DEV_GPIO_INPUT, DEV_GPIO_LOW);
+        Init();
     }
     void writeCmd(UBYTE Cmd);
     void writeReg(UBYTE Reg, UBYTE data);
@@ -178,7 +179,7 @@ public:
     void setChannal_ADC2(UBYTE Channal);
     void setDiffChannal(UBYTE Channal);
     void setDiffChannal_ADC2(UBYTE Channal);
-    UDOUBLE readADC1Data(void);
+    double readADC1Data(void);
     UDOUBLE readADC2Data(void);
     UDOUBLE getChannalValue(UBYTE Channel);
     UDOUBLE getChannalValueADC2(UBYTE Channel);
@@ -192,6 +193,7 @@ public:
     void setDelay(void);
     void setFilter(void);
     void setDelayPulseMode(void);
+    void Init(void);
 
 
 
