@@ -177,7 +177,7 @@ int main(int argc, char **argv)
   common::MyState state;
   common::MyTrajectory trajectory;
   common::MyControlInput control_input;
-
+  
   // 加载参数文件
   if (!params.loadFromFile(file_path)) {
     ROS_ERROR("Failed to load parameters from file.");

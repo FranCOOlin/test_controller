@@ -1,0 +1,1 @@
+/usr/bin/aarch64-linux-gnu-g++ -fPIC -g  -shared -Wl,-soname,libdev_config.so -o devel/lib/libdev_config.so CMakeFiles/dev_config.dir/include/test_controller/triple_adc/dev_config.cpp.o 

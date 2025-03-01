@@ -1,0 +1,1 @@
+/usr/bin/aarch64-linux-gnu-g++ -fPIC -g  -shared -Wl,-soname,libADS1263.so -o devel/lib/libADS1263.so CMakeFiles/ADS1263.dir/include/test_controller/triple_adc/ADS1263.cpp.o 
