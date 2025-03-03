@@ -1,1 +1,0 @@
-/usr/bin/aarch64-linux-gnu-g++ -fPIC -g  -shared -Wl,-soname,libdev_gpio.so -o devel/lib/libdev_gpio.so CMakeFiles/dev_gpio.dir/include/test_controller/triple_adc/dev_gpio.cpp.o 

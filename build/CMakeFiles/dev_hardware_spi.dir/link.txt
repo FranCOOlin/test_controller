@@ -1,1 +1,0 @@
-/usr/bin/aarch64-linux-gnu-g++ -fPIC -g  -shared -Wl,-soname,libdev_hardware_spi.so -o devel/lib/libdev_hardware_spi.so CMakeFiles/dev_hardware_spi.dir/include/test_controller/triple_adc/dev_hardware_spi.cpp.o 
