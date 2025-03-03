@@ -1,12 +1,12 @@
-#ifndef MY_STATE_H
-#define MY_STATE_H
+#ifndef CUSTOM_QUADROTOR_STATE_H
+#define CUSTOM_QUADROTOR_STATE_H
 
 #include "test_controller/common/state.h"
 #include <eigen3/Eigen/Dense>
 
 namespace common {
 
-class MyState : public State {
+class QuadrotorState : public State {
 public:
     Eigen::Vector3d p;     // 位置向量
     Eigen::Vector3d vi;     // Inertial frame velocity
@@ -16,7 +16,7 @@ public:
     Eigen::Matrix3d R;     // 旋转矩阵
     Eigen::Vector3d omega; // 角速度
 
-    MyState()
+    QuadrotorState()
         : p(Eigen::Vector3d::Zero()),
         vi(Eigen::Vector3d::Zero()),
         vb(Eigen::Vector3d::Zero()),

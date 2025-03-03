@@ -1,12 +1,12 @@
-#ifndef OBSERVER_MY_OBSERVER_H
-#define OBSERVER_MY_OBSERVER_H
+#ifndef OBSERVER_NOKOV_FILTER_H
+#define OBSERVER_NOKOV_FILTER_H
 
 #include "test_controller/observer/observer.h"
 #include "test_controller/common/integrator.hpp"
-#include "test_controller/custom/myparams.h"
-#include "test_controller/custom/mystate.h"
+#include "test_controller/custom/system_params.h"
+#include "test_controller/custom/quadrotor_state.h"
 #include "test_controller/custom/mymeasurement.h"
-#include "test_controller/custom/mycontrol_input.h"
+#include "test_controller/custom/quadrotor_control_input.h"
 #include <boost/numeric/odeint.hpp>
 #include <eigen3/Eigen/Dense>
 #include <deque>
@@ -32,7 +32,8 @@ public:
     // 使用 Boost ODEint 积分器类型
 
     // 构造函数：接收 Params、State 和 Measurement 的引用
-    MyObserver(common::MyParams &_params, common::MyState &_state, common::MyMeasurement &_measurement, common::MyControlInput &_control_input, bool _simu)
+    MyObserver(common::MyParams &_params, common::MyState &_state, comm
+        on::MyMeasurement &_measurement, common::MyControlInput &_control_input, bool _simu)
         : params(_params), state(_state), measurement(_measurement),control_input(_control_input), integrator(std::bind(&MyObserver::f, this,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3,std::ref(params), std::ref(control_input)), 0.01),simu(_simu), p_old(Eigen::Vector3d::Zero()), R_old(Eigen::Matrix3d::Identity()), vi_old(Eigen::Vector3d::Zero()), omega_old(Eigen::Vector3d::Zero()){}
 
     // 中值计算函数（适用于 Vector3d）
