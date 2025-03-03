@@ -231,15 +231,8 @@ namespace controller
      * @param kw        标量增益
      * @param hr        标量增益
      * @param kr        标量增益
-     * @param[out] zp   3x1
-     * @param[out] zv   3x1
-     * @param[out] zq   3x1
-     * @param[out] zw   3x1
-     * @param[out] zr   3x1
      * @param[out] T    标量
      * @param[out] Omega 3x1
-     * @param[out] V    标量
-     * @param[out] dV   标量
      */
 
     inline void Controller(
