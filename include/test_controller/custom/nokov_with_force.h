@@ -6,14 +6,14 @@
 
 namespace common {
 
-// 派生类 MyMeasurement，继承自 Measurement 类
-class MyMeasurement : public Measurement {
+// 派生类 NokovWithForce，继承自 Measurement 类
+class NokovWithForce : public Measurement {
 public:
     Eigen::Vector3d p;       // 位置测量值（3D 向量）
     Eigen::Quaterniond attitude; // 姿态测量值（四元数）
     
     // 构造函数：初始化位置、姿态和更新标志
-    MyMeasurement() : p(Eigen::Vector3d::Zero()), attitude(Eigen::Quaterniond::Identity()) {}
+    NokovWithForce() : p(Eigen::Vector3d::Zero()), attitude(Eigen::Quaterniond::Identity()) {}
 
 };
 

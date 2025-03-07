@@ -2,22 +2,22 @@
 #define CONTROLLER_MYCONTROLLER_H
 
 #include "test_controller/controller/controller.h"
-#include "test_controller/custom/myparams.h"
-#include "test_controller/custom/mystate.h"
+#include "test_controller/custom/system_params.h"
+#include "test_controller/custom/quadrotor_state.h"
 #include "test_controller/custom/mytrajectory.h"
-#include "test_controller/custom/mycontrol_input.h"
+#include "test_controller/custom/quadrotor_control_input.h"
 #include <eigen3/Eigen/Dense>
 
 namespace controller {
 
 // 示例派生类 MyController，实现了 update() 函数
-class MyController : public Controller {
+class QuadrotorControllerGanYu : public Controller {
 public:
-  common::MyParams &params;
-  common::MyState &state;
+  common::SystemParams &params;
+  common::QuadrotorState &state;
   common::MyTrajectory &trajectory;
-  common::MyControlInput &control_input;
-  MyController(common::MyParams &_params, common::MyState &_state, common::MyTrajectory &_trajectory, common::MyControlInput &_control_input)
+  common::QuadrotorControlInput &control_input;
+  QuadrotorControllerGanYu(common::SystemParams &_params, common::QuadrotorState &_state, common::MyTrajectory &_trajectory, common::QuadrotorControlInput &_control_input)
   : params(_params), state(_state), trajectory(_trajectory), control_input(_control_input) {}
 
 
@@ -61,17 +61,17 @@ public:
       return Eigen::Matrix3d::Identity() - vec * vec.transpose();
   }
 
-  virtual ~MyController() { }
+  virtual ~QuadrotorControllerGanYu() { }
 
   // 实现 update()，计算控制信号（此处仅为示例：返回目标航点与当前位置的差值组成的 1 维向量）
   virtual void update() override {
     Eigen::VectorXd output(4);
 
-    double kp = params.kp;
-    double kv = params.kv;
-    double kr = params.kr;
-    double hr = params.hr;
-    double mq = params.mq;
+    double kp = params.quadrotor_kp;
+    double kv = params.quadrotor_kv;
+    double kr = params.quadrotor_kr;
+    double hr = params.quadrotor_hr;
+    double mq = params.quadrotor_mq;
     double g = params.g;
     double use_polyval = params.use_polyval;
     Eigen::Vector3d p1 = params.p1;

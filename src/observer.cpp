@@ -20,13 +20,11 @@
 #include <deque>
 
 // 引入各模块头文件
-#include "test_controller/common/params.h"          // Params
-#include "test_controller/common/state.h"           // State
 #include "test_controller/observer/observer.h"  // Observer 抽象基类
 #include "test_controller/observer/observer_scheduler.h"  // ControllerScheduler 类
-#include "test_controller/custom/myobserver.h"   // MyObserver 派生类
-#include "test_controller/custom/myparams.h"       // MyParams 派生类
-#include "test_controller/custom/mystate.h"        // MyState 派生类
+#include "test_controller/custom/nokov_filter.h"   // NokovFilter 派生类
+#include "test_controller/custom/system_params.h"       // SystemParams 派生类
+#include "test_controller/custom/quadrotor_state.h"        // MyState 派生类
 #include "test_controller/custom/mytrajectory.h"      // MyTrajectory 派生类
 #include "test_controller/common/convert.h"
 // ROS 消息
@@ -52,12 +50,12 @@ void observerSWCallback(const std_msgs::Int32::ConstPtr& msg, observer::Observer
 }
 
 
-void feedbackCallback(const geometry_msgs::PoseStamped::ConstPtr& msg, common::MyMeasurement &measurement)
+void feedbackCallback(const geometry_msgs::PoseStamped::ConstPtr& msg, common::NokovWithForce &measurement)
 {
     measurement.p = Eigen::Vector3d(msg->pose.position.x, msg->pose.position.y, msg->pose.position.z);
     measurement.attitude = Eigen::Quaterniond(msg->pose.orientation.w, msg->pose.orientation.x, msg->pose.orientation.y, msg->pose.orientation.z);
 }
-void simuFeedbackCallback(const test_controller::UAVState::ConstPtr& msg, common::MyMeasurement &measurement)
+void simuFeedbackCallback(const test_controller::UAVState::ConstPtr& msg, common::NokovWithForce &measurement)
 {
     // 从消息中提取位置和姿态
     measurement.p = Eigen::Vector3d(msg->position.x, msg->position.y, msg->position.z);
@@ -87,10 +85,10 @@ int main(int argc, char **argv)
     ros::Publisher pub = nh.advertise<test_controller::UAVState>("observer_topic", 10);
 
     // 创建统一对象
-    common::MyParams params;
-    common::MyState state;
-    common::MyMeasurement measurement;
-    common::MyControlInput control_input;
+    common::SystemParams params;
+    common::QuadrotorState state;
+    common::NokovWithForce measurement;
+    common::QuadrotorControlInput control_input;
 
     // 加载参数文件
     if (!params.loadFromFile(file_path))
@@ -99,8 +97,8 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    // 初始化 MyObserver 对象（作为 Observer 的派生类）
-    observer::MyObserver myObs(params, state, measurement, control_input, simu);
+    // 初始化 NokovFilter 对象（作为 Observer 的派生类）
+    observer::NokovFilter myObs(params, state, measurement, control_input, simu);
 
     // 初始化 ObserverScheduler 对象（栈变量），先注册 Observer，再调用 switchObserver
     observer::ObserverScheduler scheduler;

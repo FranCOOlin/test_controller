@@ -5,7 +5,7 @@
 #include "test_controller/common/integrator.hpp"
 #include "test_controller/custom/system_params.h"
 #include "test_controller/custom/quadrotor_state.h"
-#include "test_controller/custom/mymeasurement.h"
+#include "test_controller/custom/nokov_with_force.h"
 #include "test_controller/custom/quadrotor_control_input.h"
 #include <boost/numeric/odeint.hpp>
 #include <eigen3/Eigen/Dense>
@@ -15,12 +15,12 @@ namespace observer {
 
 using SystemDynamics = std::function<void(const state_type&, state_type&, double)>;
 
-class MyObserver : public Observer {
+class NokovFilter : public Observer {
 public:
-    common::MyParams &params;
-    common::MyMeasurement &measurement;
-    common::MyState &state;
-    common::MyControlInput &control_input;
+    common::SystemParams &params;
+    common::NokovWithForce &measurement;
+    common::QuadrotorState &state;
+    common::QuadrotorControlInput &control_input;
     common::Integrator<boost::numeric::odeint::runge_kutta_fehlberg78<state_type>> integrator;
     Eigen::Vector3d p_old;          // 上次的位置
     Eigen::Matrix3d R_old; // 上次的旋转矩阵
@@ -32,9 +32,8 @@ public:
     // 使用 Boost ODEint 积分器类型
 
     // 构造函数：接收 Params、State 和 Measurement 的引用
-    MyObserver(common::MyParams &_params, common::MyState &_state, comm
-        on::MyMeasurement &_measurement, common::MyControlInput &_control_input, bool _simu)
-        : params(_params), state(_state), measurement(_measurement),control_input(_control_input), integrator(std::bind(&MyObserver::f, this,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3,std::ref(params), std::ref(control_input)), 0.01),simu(_simu), p_old(Eigen::Vector3d::Zero()), R_old(Eigen::Matrix3d::Identity()), vi_old(Eigen::Vector3d::Zero()), omega_old(Eigen::Vector3d::Zero()){}
+    NokovFilter(common::SystemParams &_params, common::QuadrotorState &_state, common::NokovWithForce &_measurement, common::QuadrotorControlInput &_control_input, bool _simu)
+        : params(_params), state(_state), measurement(_measurement),control_input(_control_input), integrator(std::bind(&NokovFilter::f, this,std::placeholders::_1,std::placeholders::_2,std::placeholders::_3,std::ref(params), std::ref(control_input)), 0.01),simu(_simu), p_old(Eigen::Vector3d::Zero()), R_old(Eigen::Matrix3d::Identity()), vi_old(Eigen::Vector3d::Zero()), omega_old(Eigen::Vector3d::Zero()){}
 
     // 中值计算函数（适用于 Vector3d）
     Eigen::Vector3d calculateMedian(std::deque<Eigen::Vector3d>& window) {
@@ -126,7 +125,7 @@ public:
     }
 
 
-    void f(const state_type &x, state_type &dxdt, double t, common::MyParams &params,const common::MyControlInput &control_input) {
+    void f(const state_type &x, state_type &dxdt, double t, common::SystemParams &params,const common::QuadrotorControlInput &control_input) {
         // 通过状态方程计算 dx/dt
         dxdt = x;
         // your code here

@@ -14,11 +14,15 @@ public:
     Eigen::Vector3d dpd;
     Eigen::Vector3d d2pd;
     Eigen::Vector3d d3pd;
+    Eigen::Vector3d d4pd;
+    Eigen::Vector3d d5pd;
     MyTrajectory():
-        pd(Eigen::Vector3d(0,0,-1)),
+        pd(Eigen::Vector3d(1,1,-1)),
         dpd(Eigen::Vector3d::Zero()),
         d2pd(Eigen::Vector3d::Zero()),
-        d3pd(Eigen::Vector3d::Zero())
+        d3pd(Eigen::Vector3d::Zero()),
+        d4pd(Eigen::Vector3d::Zero()),
+        d5pd(Eigen::Vector3d::Zero())
     {}
 
     // 重写基类的 setWaypoints 函数
@@ -27,6 +31,8 @@ public:
         dpd = points.segment(3, 3);
         d2pd = points.segment(6, 3);
         d3pd = points.segment(9, 3);
+        d4pd = points.segment(12, 3);
+        d5pd = points.segment(15, 3);
     }
 
     // 获取当前的 waypoints
@@ -36,6 +42,8 @@ public:
         waypoints.push_back(dpd);
         waypoints.push_back(d2pd);
         waypoints.push_back(d3pd);
+        waypoints.push_back(d4pd);
+        waypoints.push_back(d5pd);
     }
 
     ~MyTrajectory() = default;

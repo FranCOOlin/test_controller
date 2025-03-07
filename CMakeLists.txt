@@ -53,6 +53,7 @@ add_message_files(
   FILES
   UAVState.msg
   UAVCommand.msg
+  QSLSState.msg
   Float64MultiArrayWithHeader.msg
 )
 
@@ -129,22 +130,25 @@ include_directories(
 # add_library(integrator_lib
 #   src/integrator.cpp
 # )
-add_library(   ##用来手动链接.hpp和.cpp文件
-        dev_gpio           ##自定义的链接库名，后面用来识别
-        include/test_controller/triple_adc/dev_gpio.cpp     ##.cpp的路径
-        )
-add_library(   ##用来手动链接.hpp和.cpp文件
-        dev_hardware_spi           ##自定义的链接库名，后面用来识别
-        include/test_controller/triple_adc/dev_hardware_spi.cpp     ##.cpp的路径
-        )
-add_library(   ##用来手动链接.hpp和.cpp文件
-        dev_config           ##自定义的链接库名，后面用来识别
-        include/test_controller/triple_adc/dev_config.cpp     ##.cpp的路径
-        )
-add_library(   ##用来手动链接.hpp和.cpp文件
-        ADS1263           ##自定义的链接库名，后面用来识别
-        include/test_controller/triple_adc/ADS1263.cpp     ##.cpp的路径
-        )
+
+
+# add_library(   ##用来手动链接.hpp和.cpp文件
+#         dev_gpio           ##自定义的链接库名，后面用来识别
+#         include/test_controller/triple_adc/dev_gpio.cpp     ##.cpp的路径
+#         )
+# add_library(   ##用来手动链接.hpp和.cpp文件
+#         dev_hardware_spi           ##自定义的链接库名，后面用来识别
+#         include/test_controller/triple_adc/dev_hardware_spi.cpp     ##.cpp的路径
+#         )
+# add_library(   ##用来手动链接.hpp和.cpp文件
+#         dev_config           ##自定义的链接库名，后面用来识别
+#         include/test_controller/triple_adc/dev_config.cpp     ##.cpp的路径
+#         )
+# add_library(   ##用来手动链接.hpp和.cpp文件
+#         ADS1263           ##自定义的链接库名，后面用来识别
+#         include/test_controller/triple_adc/ADS1263.cpp     ##.cpp的路径
+#         )
+
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -161,7 +165,8 @@ add_executable(simulator src/simu.cpp)
 add_executable(odeint_example src/odeint_example.cpp)
 add_executable(sin_publish src/sin_publisher.cpp)
 add_executable(observer src/observer.cpp)
-add_executable(triple_adc_read src/triple_adc_read.cpp)
+add_executable(check_controller src/check_controller.cpp)
+# add_executable(triple_adc_read src/triple_adc_read.cpp)
 
 # Generate custom message before compiling source code
 add_dependencies(controller_old ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -171,7 +176,8 @@ add_dependencies(simulator ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED
 add_dependencies(odeint_example ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(sin_publish ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(observer ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(triple_adc_read ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(check_controller ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_dependencies(triple_adc_read ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
@@ -214,14 +220,18 @@ target_link_libraries(
   ${catkin_LIBRARIES}
 )
 target_link_libraries(
-  triple_adc_read
-  ADS1263
-  dev_gpio
-  dev_hardware_spi
-  dev_config
+  check_controller
   ${catkin_LIBRARIES}
-  -lwiringPi
 )
+# target_link_libraries(
+#   triple_adc_read
+#   ADS1263
+#   dev_gpio
+#   dev_hardware_spi
+#   dev_config
+#   ${catkin_LIBRARIES}
+#   -lwiringPi
+# )
 
 #############
 ## Install ##
@@ -233,6 +243,7 @@ target_link_libraries(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
+  scripts/simuQSLS.py
   scripts/simu.py
   scripts/rebootFC.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
