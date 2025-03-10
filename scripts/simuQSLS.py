@@ -6,6 +6,9 @@ from test_controller.msg import UAVCommand, QSLSState
 from scipy.integrate import ode
 from numpy.linalg import norm
 
+
+
+
 def S(vec):
     return np.array([0, -vec[2, 0], vec[1, 0],
                      vec[2, 0], 0, -vec[0, 0],
@@ -45,6 +48,7 @@ class QSLS():
             [2 * (quadAtt[1] * quadAtt[3] - quadAtt[2] * quadAtt[0]), 2 * (quadAtt[2] * quadAtt[3] + quadAtt[1] * quadAtt[0]), -2 * (quadAtt[1]**2 + quadAtt[2]**2) + 1]
         ])
         quadAtt = quadAtt.reshape([4, 1])
+        # quaternion : w, x, y, z
         T = action[0]
         Omega = np.array(action[1:4]).reshape([3, 1])
         f = - T * np.dot(R, e3)
@@ -73,9 +77,12 @@ class QSLSSimulatorNode:
             rospy.loginfo("UAV ID: %s", uav_id)
         
         # 初始状态
-        init_state = [10, 10, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+        init_state = [0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
         self.simuRate = 300
-        self.simu_model = QSLS(init_state,dt=1/self.simuRate)
+        self.mq = 0.618
+        self.ml = 0.51
+        self.l = 0.6
+        self.simu_model = QSLS(init_state,dt=1/self.simuRate,mq=self.mq, ml=self.ml,l=self.l)
 
         # 订阅控制输入
         self.control_sub = rospy.Subscriber(uav_id + '/control', UAVCommand, self.control_callback)
@@ -84,7 +91,7 @@ class QSLSSimulatorNode:
         self.state_pub = rospy.Publisher(uav_id + '/qsls_state', QSLSState, queue_size=10)
 
         # 控制输入
-        self.control_input = [0, 0, 0, 0]
+        self.control_input = [self.simu_model.g*(self.simu_model.mq+self.simu_model.ml), 0, 0, 0]
         # 仿真频率
         self.rate = rospy.Rate(self.simuRate)  # Adjust frequency as needed
 
@@ -118,11 +125,23 @@ class QSLSSimulatorNode:
                 stateTopic.w.x = state[9]
                 stateTopic.w.y = state[10]
                 stateTopic.w.z = state[11]
-                stateTopic.quat.x = state[12]
-                stateTopic.quat.y = state[13]
-                stateTopic.quat.z = state[14]
-                stateTopic.quat.w = state[15]
-                rospy.loginfo("State: %s", stateTopic)
+                pL = np.array([state[0], state[1], state[2]])
+                vL = np.array([state[3], state[4], state[5]])
+                q = np.array([state[6], state[7], state[8]])
+                w = np.array([state[9], state[10], state[11]])
+                pQ = pL - self.l * q
+                stateTopic.pQ.x = pQ[0]
+                stateTopic.pQ.y = pQ[1]
+                stateTopic.pQ.z = pQ[2]
+                vQ = vL - np.cross(w, self.l * q)
+                stateTopic.vQ.x = vQ[0]
+                stateTopic.vQ.y = vQ[1]
+                stateTopic.vQ.z = vQ[2]
+                stateTopic.quat.w = state[12]
+                stateTopic.quat.x = state[13]
+                stateTopic.quat.y = state[14]
+                stateTopic.quat.z = state[15]
+                # rospy.loginfo("State: %s", stateTopic)
                 self.state_pub.publish(stateTopic)
 
             self.rate.sleep()

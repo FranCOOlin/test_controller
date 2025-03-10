@@ -13,6 +13,8 @@
 #include <mavros_msgs/SetMode.h>
 #include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/Vector3Stamped.h>
+#include <geometry_msgs/TransformStamped.h>
 
 #include <functional>
 #include <utility>  // std::ref
@@ -60,6 +62,15 @@ void simuFeedbackCallback(const test_controller::UAVState::ConstPtr& msg, common
     // 从消息中提取位置和姿态
     measurement.p = Eigen::Vector3d(msg->position.x, msg->position.y, msg->position.z);
     measurement.attitude = Eigen::Quaterniond(msg->attitude.w, msg->attitude.x, msg->attitude.y, msg->attitude.z);
+    // ROS_INFO("Feedback received: p = %f %f %f, q = %f %f %f %f", measurement.p(0), measurement.p(1), measurement.p(2), measurement.attitude.w(), measurement.attitude.x(), measurement.attitude.y(), measurement.attitude.z());
+}
+
+void simuQSLSpQFeedbackCallback(const geometry_msgs::TransformStamped::ConstPtr& msg, common::NokovWithForce &measurement)
+{
+    // 从消息中提取位置和姿态
+    measurement.p = Eigen::Vector3d(msg->transform.translation.x, msg->transform.translation.y, msg->transform.translation.z);
+    measurement.attitude = Eigen::Quaterniond(msg->transform.rotation.w, msg->transform.rotation.x, msg->transform.rotation.y, msg->transform.rotation.z);
+    measurement.time = msg->header.stamp.toSec();
     // ROS_INFO("Feedback received: p = %f %f %f, q = %f %f %f %f", measurement.p(0), measurement.p(1), measurement.p(2), measurement.attitude.w(), measurement.attitude.x(), measurement.attitude.y(), measurement.attitude.z());
 }
 

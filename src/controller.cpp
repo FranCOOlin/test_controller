@@ -327,7 +327,7 @@ int main(int argc, char **argv)
     ROS_INFO("Simulation mode");
 
     // 初始化控制输入 Publisher
-    ros::Publisher control_pub = nh.advertise<test_controller::UAVCommand>(uav_id + "/mycontrol", 10);
+    ros::Publisher control_pub = nh.advertise<test_controller::UAVCommand>(uav_id + "/control", 10);
     // 订阅状态反馈话题，使用 std::bind 和 std::ref 传入对象引用
     ros::Subscriber state_sub = nh.subscribe<std_msgs::Float64MultiArray>(uav_id+"/quadrotor_state", 10, std::bind(stateCallback, std::placeholders::_1, std::ref(quadrotor_ctrl.state)));
     ros::Subscriber qsls_state_sub = nh.subscribe<test_controller::QSLSState>(uav_id+"/qsls_state", 10, std::bind(simuQSLSStateCallback, std::placeholders::_1, std::ref(qsls_ctrl.state)));
@@ -359,8 +359,8 @@ int main(int argc, char **argv)
       command_msg.omega.y = control_input.omega(1);
       command_msg.omega.z = control_input.omega(2);
       control_pub.publish(command_msg);
-      ROS_INFO("Curent Time: %f",ros::Time::now().toSec());
-      ROS_INFO("Published command: thrust = %f, omega = [%f, %f, %f]", command_msg.thrust, command_msg.omega.x, command_msg.omega.y, command_msg.omega.z);
+      // ROS_INFO("Curent Time: %f",ros::Time::now().toSec());
+      // ROS_INFO("Published command: thrust = %f, omega = [%f, %f, %f]", command_msg.thrust, command_msg.omega.x, command_msg.omega.y, command_msg.omega.z);
       Rate.sleep();
     }
   }

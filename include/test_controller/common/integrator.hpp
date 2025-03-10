@@ -7,6 +7,7 @@
 #include <memory>
 
 typedef std::vector<double> state_type;
+// TODO change to Eigen::VectorXd
 
 namespace common {
 
