@@ -48,6 +48,10 @@ namespace common
         Eigen::MatrixXd obs_covR;
         Eigen::MatrixXd obs_invcovR;
         Eigen::MatrixXd obs_P;
+        Eigen::MatrixXd obs_A;
+        Eigen::MatrixXd obs_C;
+        Eigen::MatrixXd obs_B;
+        Eigen::MatrixXd obs_K;
 
         // For signal generation
         bool use_polyval;
@@ -244,20 +248,26 @@ namespace common
                 obs_covR = blkdiag({obs_covR_pQ, obs_covR_q});
                 obs_invcovR = obs_covR.inverse();
                 // solve Riccati equation begin
-                // initialize A and C
-                Eigen::MatrixXd A = Eigen::MatrixXd::Zero(18, 18);
-                Eigen::MatrixXd C = Eigen::MatrixXd::Zero(6, 18);
+                // initialize A, B and C
+                obs_A = Eigen::MatrixXd::Zero(18, 18);
+                obs_B = Eigen::MatrixXd::Zero(18, 9);
+                obs_C = Eigen::MatrixXd::Zero(6, 18);
                 Eigen::Matrix3d I = Eigen::Matrix3d::Identity();
-                A.block(0, 3, 3, 3) = I;
-                A.block(3, 12, 3, 3) = -I;
-                A.block(6, 9, 3, 3) = I;
-                A.block(9, 15, 3, 3) = I;
-                C.block(0, 0, 3, 3) = I;
-                C.block(3, 0, 3, 3) = -I;
-                C.block(3, 6, 3, 3) = I;
-                std::cout << A << std::endl;
-                std::cout << C << std::endl;
-                common::Integrator<boost::numeric::odeint::runge_kutta_fehlberg78<state_type>> integrator(std::bind(&SystemParams::Riccati, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::ref(A), std::ref(C), std::ref(obs_covQ), std::ref(obs_invcovR)), 0.01);
+                obs_A.block(0, 3, 3, 3) = I;
+                obs_A.block(3, 12, 3, 3) = -I;
+                obs_A.block(6, 9, 3, 3) = I;
+                obs_A.block(9, 15, 3, 3) = I;
+                obs_B.block(3, 0, 3, 3) = -1.0/QSLS_bar_mQ*I;
+                obs_B.block(3, 3, 3, 3) = 1.0/QSLS_bar_mQ*I;
+                obs_B.block(3, 6, 3, 3) = I;
+                obs_B.block(9, 0, 3, 3) = 1.0/QSLS_bar_mL*I;
+                obs_B.block(9, 6, 3, 3) = I;
+                obs_C.block(0, 0, 3, 3) = I;
+                obs_C.block(3, 0, 3, 3) = -I;
+                obs_C.block(3, 6, 3, 3) = I;
+                std::cout << obs_A << std::endl;
+                std::cout << obs_C << std::endl;
+                common::Integrator<boost::numeric::odeint::runge_kutta_fehlberg78<state_type>> integrator(std::bind(&SystemParams::Riccati, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::ref(obs_A), std::ref(obs_C), std::ref(obs_covQ), std::ref(obs_invcovR)), 0.01);
                 // initialize P
                 Eigen::MatrixXd P = Eigen::MatrixXd::Zero(18, 18);
                 // initialize a vector for integrator
@@ -271,6 +281,8 @@ namespace common
                 P = Eigen::Map<const Eigen::MatrixXd>(P_vector.data(), P.rows(), P.cols());
                 std::cout << "P:" << std::endl;
                 std::cout << P << std::endl;
+                obs_P = P;
+                obs_K = obs_P*obs_C.transpose()*obs_invcovR;
                 // solve Riccati equation end
                 
             }

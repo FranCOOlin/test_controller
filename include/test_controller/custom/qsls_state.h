@@ -26,11 +26,11 @@ public:
     Eigen::Vector3d bQ;
 
     QSLSState()
-        : pL(Eigen::Vector3d::Zero()),
+        : pL(Eigen::Vector3d(-2.0,0,-1.0)),
         vL(Eigen::Vector3d::Zero()),
-        q(Eigen::Vector3d(0,0,1)),
+        q(Eigen::Vector3d(0,0,1.0)),
         w(Eigen::Vector3d::Zero()),
-        pQ(Eigen::Vector3d(0,0,-0.6)),
+        pQ(Eigen::Vector3d(-2.0,0,-1.6)),
         vQ(Eigen::Vector3d::Zero()),
         quat(Eigen::Quaterniond::Identity()),
         euler(Eigen::Vector3d::Zero()),

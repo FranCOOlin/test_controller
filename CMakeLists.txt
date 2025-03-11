@@ -166,6 +166,7 @@ add_executable(odeint_example src/odeint_example.cpp)
 add_executable(sin_publish src/sin_publisher.cpp)
 add_executable(observer src/observer.cpp)
 add_executable(check_controller src/check_controller.cpp)
+add_executable(check_observer src/check_observer.cpp)
 # add_executable(triple_adc_read src/triple_adc_read.cpp)
 
 # Generate custom message before compiling source code
@@ -177,6 +178,7 @@ add_dependencies(odeint_example ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXP
 add_dependencies(sin_publish ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(observer ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(check_controller ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(check_observer ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 # add_dependencies(triple_adc_read ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -221,6 +223,10 @@ target_link_libraries(
 )
 target_link_libraries(
   check_controller
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(
+  check_observer
   ${catkin_LIBRARIES}
 )
 # target_link_libraries(

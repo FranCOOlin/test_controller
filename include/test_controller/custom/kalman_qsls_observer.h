@@ -26,13 +26,27 @@ namespace observer
         common::Integrator<boost::numeric::odeint::runge_kutta_fehlberg78<state_type>> integrator; // 使用 Boost ODEint 积分器类型
 
         // 构造函数：接收 Params、State 和 Measurement 的引用
-        KalmanQSLSObserver(common::SystemParams &_params, common::QSLSState &_state, common::NokovWithForce &_measurement, common::QuadrotorControlInput &_control_input, bool _simu)
-            : params(_params), state(_state), measurement(_measurement), control_input(_control_input), integrator(std::bind(&KalmanQSLSObserver::f, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::ref(params), std::ref(control_input)), 0.01) {}
+        KalmanQSLSObserver(common::SystemParams &_params, common::QSLSState &_state, common::NokovWithForce &_measurement, common::QuadrotorControlInput &_control_input)
+            : params(_params), state(_state), measurement(_measurement), control_input(_control_input), integrator(std::bind(&KalmanQSLSObserver::f, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::ref(params), std::ref(control_input), std::ref(measurement)), 0.01) {last_update_time = -1.0;}
 
-        void f(const state_type &x, state_type &dxdt, double t, common::SystemParams &params, const common::QuadrotorControlInput &control_input)
-        {
-            // 通过状态方程计算 dx/dt
-            dxdt = x;
+        void f(const state_type &x, state_type &dxdt, double t, common::SystemParams &params, const common::QuadrotorControlInput &control_input, const common::NokovWithForce &measurement)
+        {   
+            Eigen::VectorXd hat_eta(18);
+            Eigen::VectorXd dhat_eta(18);
+            hat_eta = Eigen::Map<const Eigen::VectorXd>(x.data(), x.size());
+            Eigen::Matrix3d R = measurement.attitude.toRotationMatrix();
+            Eigen::Vector3d F = -control_input.thrust * R * Eigen::Vector3d(0, 0, 1);
+            Eigen::Vector3d G = params.g * Eigen::Vector3d(0, 0, 1);
+            Eigen::VectorXd u = Eigen::VectorXd(measurement.fc.size() + F.size() + G.size());
+            u << measurement.fc, F, G;
+            Eigen::Vector3d pL_pQ = params.QSLS_l * (-measurement.fc/measurement.fc.norm());
+            Eigen::VectorXd y = Eigen::VectorXd(measurement.p.size() + measurement.fc.size());
+            y << measurement.p, pL_pQ;
+            dhat_eta = params.obs_A * hat_eta + params.obs_B * u + params.obs_K * (y - params.obs_C * hat_eta);
+            for(size_t i = 0; i < x.size(); ++i)
+            {
+                dxdt[i] = dhat_eta(i);
+            }
         }
         // 实现具体的 update() 函数：估计系统状态并更新 state
         void update() override
@@ -44,7 +58,28 @@ namespace observer
             std::vector<double> int_vec(eigen_vec.data(), eigen_vec.data() + eigen_vec.size());
 
             double t = measurement.time;
-            integrator.integrate(int_vec, 0.0, t - last_update_time);
+            if(last_update_time < 0)
+            {
+                last_update_time = t;
+                return;
+            }
+            if(t - last_update_time < 1e-6)
+            {
+                return;
+            }
+            double t_start = ros::Time::now().toSec();
+            integrator.step(int_vec, 0.0, t - last_update_time);
+            double t_end = ros::Time::now().toSec();
+            ROS_INFO("Integration time: %f", t_end - t_start);
+            ROS_INFO("time interval: %f", t - last_update_time);
+            state.pQ = Eigen::Vector3d(int_vec.data());
+            state.vQ = Eigen::Vector3d(int_vec.data() + 3);
+            state.pL = Eigen::Vector3d(int_vec.data() + 6);
+            state.vL = Eigen::Vector3d(int_vec.data() + 9);
+            state.bQ = Eigen::Vector3d(int_vec.data() + 12);
+            state.bL = Eigen::Vector3d(int_vec.data() + 15);
+            state.q = (state.pL-state.pQ).normalized();
+            state.w = (state.pL-state.pQ).cross(state.vL-state.vQ)/(state.pL-state.pQ).squaredNorm();
             state.updated = true;
             last_update_time = t;
         }
