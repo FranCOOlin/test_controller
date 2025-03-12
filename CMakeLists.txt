@@ -161,7 +161,6 @@ include_directories(
 add_executable(controller_old src/controller_old.cpp)
 add_executable(controller src/controller.cpp)
 add_executable(estimator src/estimator.cpp)
-add_executable(simulator src/simu.cpp)
 add_executable(odeint_example src/odeint_example.cpp)
 add_executable(sin_publish src/sin_publisher.cpp)
 add_executable(observer src/observer.cpp)
@@ -173,7 +172,6 @@ add_executable(check_observer src/check_observer.cpp)
 add_dependencies(controller_old ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(controller ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(estimator ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-add_dependencies(simulator ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(odeint_example ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(sin_publish ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(observer ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -202,10 +200,6 @@ target_link_libraries(
 target_link_libraries(
   estimator
 
-  ${catkin_LIBRARIES}
-)
-target_link_libraries(
-  simulator
   ${catkin_LIBRARIES}
 )
 target_link_libraries(

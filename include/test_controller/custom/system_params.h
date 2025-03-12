@@ -276,7 +276,7 @@ namespace common
                 for (size_t i = 0; i < x.size(); ++i) {
                     x[i] = P_vector[i];  // 将计算的dx/dt传回
                 }
-                integrator.integrate(x, 0, 20);
+                integrator.integrate(x, 0, 10);
                 P_vector = Eigen::Map<const Eigen::VectorXd>(x.data(), x.size());
                 P = Eigen::Map<const Eigen::MatrixXd>(P_vector.data(), P.rows(), P.cols());
                 std::cout << "P:" << std::endl;

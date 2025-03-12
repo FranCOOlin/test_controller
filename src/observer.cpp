@@ -40,17 +40,31 @@
 
 void observerSWCallback(const std_msgs::Int32::ConstPtr& msg, observer::ObserverScheduler &scheduler)
 {
-    int observer_id = msg->data;  // 获取消息中的控制编号
-    ROS_INFO("Switching to observer with ID: %d", observer_id);
-
-    // 通过给定的 observer_id 查找并切换观察器
-    if (observer_id >= 0) {
-        // 假设 ObserverScheduler 通过 ID 找到正确的 observer
-        // 切换当前观察器
-        scheduler.switchObserver(*scheduler.observers[observer_id]);
-    } else {
-        ROS_WARN("Invalid observer ID received: %d", observer_id);
-    }
+    switch (msg->data) {
+        case 0: // ganyu controller
+          scheduler.switchObserver(*scheduler.observers[0]);
+          break;
+        case 1: // qsls controller
+          // 切换时观测器状态重置
+          if(scheduler.current_mode==0){// 仅支持从0切换到1
+            auto KalmanQSLSObserverPtr = static_cast<observer::KalmanQSLSObserver*>(scheduler.observers[1]);
+            auto NokovFilterPtr = static_cast<observer::NokovFilter*>(scheduler.observers[0]);
+            KalmanQSLSObserverPtr->state.pQ = NokovFilterPtr->state.p;
+            KalmanQSLSObserverPtr->state.vQ = Eigen::Vector3d::Zero();
+            KalmanQSLSObserverPtr->state.quat = Eigen::Quaterniond(NokovFilterPtr->state.q);
+            KalmanQSLSObserverPtr->state.pL = KalmanQSLSObserverPtr->state.pQ+KalmanQSLSObserverPtr->params.QSLS_l*Eigen::Vector3d(0,0,1);
+            KalmanQSLSObserverPtr->state.vL = Eigen::Vector3d::Zero();
+            scheduler.switchObserver(*scheduler.observers[1]);
+          }
+          else{
+            ROS_WARN("Invalid observer switch from %d to %d", scheduler.current_mode, msg->data);
+            return;
+          }
+          break;
+        default:
+          ROS_WARN("Invalid observer switch command: %d", msg->data);
+          return;
+        }
 }
 
 
@@ -72,7 +86,7 @@ void simuQSLSpQFeedbackCallback(const test_controller::UAVState::ConstPtr& msg, 
     // 从消息中提取位置和姿态
     measurement.p = Eigen::Vector3d(msg->position.x, msg->position.y, msg->position.z);
     measurement.attitude = Eigen::Quaterniond(msg->attitude.w, msg->attitude.x, msg->attitude.y, msg->attitude.z);
-    // ROS_INFO("Feedback received: p = %f %f %f, q = %f %f %f %f", measurement.p(0), measurement.p(1), measurement.p(2), measurement.attitude.w(), measurement.attitude.x(), measurement.attitude.y(), measurement.attitude.z());
+    // ROS_INFO("Feedback received: p = %+.5f %+.5f %+.5f, q = %+.5f %+.5f %+.5f %+.5f", measurement.p(0), measurement.p(1), measurement.p(2), measurement.attitude.w(), measurement.attitude.x(), measurement.attitude.y(), measurement.attitude.z());
 }
 
 void simuQSLSForceFeedbackCallback(const geometry_msgs::Vector3Stamped::ConstPtr& msg, common::NokovWithForce &measurement)
@@ -81,6 +95,7 @@ void simuQSLSForceFeedbackCallback(const geometry_msgs::Vector3Stamped::ConstPtr
     measurement.fc = measurement.attitude.toRotationMatrix()*Eigen::Vector3d(msg->vector.x, msg->vector.y, msg->vector.z);
     measurement.time = msg->header.stamp.toSec();
     // ROS_INFO("cable force received: fc = %+.5f %+.5f %+.5f, time: %+.5f", measurement.fc(0), measurement.fc(1), measurement.fc(2), measurement.time);
+    measurement.updated = true;
 }
 
 void controlInputCallback(const test_controller::UAVCommand::ConstPtr& msg, common::QuadrotorControlInput &control_input)
@@ -132,7 +147,7 @@ int main(int argc, char **argv)
     observer::ObserverScheduler scheduler;
     scheduler.registerObserver(&myObs);
     scheduler.registerObserver(&qsls_obs);
-    scheduler.switchObserver(qsls_obs); // 直接传入 Observer 对象
+    scheduler.switchObserver(myObs); // 直接传入 Observer 对象
 
 
     if(!simu){
@@ -169,11 +184,11 @@ int main(int argc, char **argv)
     else{
         ROS_INFO("Simulation mode");
         // 初始化控制输入 Publisher
-        ros::Publisher observe_pub = nh.advertise<std_msgs::Float64MultiArray>(uav_id + "/state", 10);
-        ros::Publisher qsls_observe_pub = nh.advertise<test_controller::QSLSState>(uav_id + "/myqsls_state", 10);
-        // 订阅反馈话题
-        std::string feedback_topic = uav_id + "/feedback";
-        ros::Subscriber feedback_sub = nh.subscribe<test_controller::UAVState>(feedback_topic, 10, std::bind(simuFeedbackCallback, std::placeholders::_1, std::ref(myObs.measurement)));
+        ros::Publisher observe_pub = nh.advertise<std_msgs::Float64MultiArray>(uav_id + "/quadrotor_state", 10);
+        ros::Publisher qsls_observe_pub = nh.advertise<test_controller::QSLSState>(uav_id + "/qsls_state", 10);
+        // 订阅反馈话题,仅从仿真环境中获取无人机的位置与姿态
+        std::string feedback_topic = uav_id + "/quadrotor_feedback";
+        ros::Subscriber quadrotor_feedback_sub = nh.subscribe<test_controller::UAVState>(feedback_topic, 10, std::bind(simuFeedbackCallback, std::placeholders::_1, std::ref(myObs.measurement)));
 
         ros::Subscriber qsls_feedback_sub = nh.subscribe<test_controller::UAVState>(feedback_topic, 10, std::bind(simuQSLSpQFeedbackCallback, std::placeholders::_1, std::ref(qsls_obs.measurement)));
 
@@ -185,7 +200,7 @@ int main(int argc, char **argv)
 
         ros::Subscriber cable_force_sub = nh.subscribe<geometry_msgs::Vector3Stamped>(uav_id + "/cable_force", 10, std::bind(simuQSLSForceFeedbackCallback, std::placeholders::_1, std::ref(qsls_obs.measurement)));
         // 订阅其它话题，使用 std::bind 和 std::ref 传入对象引用
-        ros::Subscriber observer_sw_sub = nh.subscribe<std_msgs::Int32>(uav_id + "/observer_sw", 10,
+        ros::Subscriber observer_sw_sub = nh.subscribe<std_msgs::Int32>(uav_id + "/controller_sw", 10,
         std::bind(observerSWCallback, std::placeholders::_1, std::ref(scheduler)));
         ros::Rate Rate(observer_rate);
         while (ros::ok())
@@ -194,41 +209,48 @@ int main(int argc, char **argv)
             // 运行观测器
 
             scheduler.run();
-            // 发送状态反馈
-            
-            // std_msgs::Float64MultiArray state_msg;
-            // std::vector<Eigen::VectorXd> vecs = {state.p, state.vi, state.q};
-            // // ROS_INFO("State updated: pos = [%f, %f, %f]", state.p(0), state.p(1), state.p(2));
-            // state_msg = common::vectorXdToFloat64MultiArray(vecs);
-            // observe_pub.publish(state_msg);
-
+            // 发布无人机状态
+            if(scheduler.current_mode==myObs.register_id){
+            std_msgs::Float64MultiArray state_msg;
+            std::vector<Eigen::VectorXd> vecs = {myObs.state.p, myObs.state.vi, state.q};
+            // ROS_INFO("State updated: pos = [%f, %f, %f]", state.p(0), state.p(1), state.p(2));
+            state_msg = common::vectorXdToFloat64MultiArray(vecs);
+            observe_pub.publish(state_msg);
+            }
+            // 发布 QSLS 状态
+            if (scheduler.current_mode == qsls_obs.register_id)
+            {            
             test_controller::QSLSState qsls_state_msg;
-            qsls_state_msg.pQ.x = qsls_state.pQ(0);
-            qsls_state_msg.pQ.y = qsls_state.pQ(1);
-            qsls_state_msg.pQ.z = qsls_state.pQ(2);
-            qsls_state_msg.vQ.x = qsls_state.vQ(0);
-            qsls_state_msg.vQ.y = qsls_state.vQ(1);
-            qsls_state_msg.vQ.z = qsls_state.vQ(2);
-            qsls_state_msg.pL.x = qsls_state.pL(0);
-            qsls_state_msg.pL.y = qsls_state.pL(1);
-            qsls_state_msg.pL.z = qsls_state.pL(2);
-            qsls_state_msg.vL.x = qsls_state.vL(0);
-            qsls_state_msg.vL.y = qsls_state.vL(1);
-            qsls_state_msg.vL.z = qsls_state.vL(2);
-            qsls_state_msg.q.x = qsls_state.q(0);
-            qsls_state_msg.q.y = qsls_state.q(1);
-            qsls_state_msg.q.z = qsls_state.q(2);
-            qsls_state_msg.w.x = qsls_state.w(0);
-            qsls_state_msg.w.y = qsls_state.w(1);
-            qsls_state_msg.w.z = qsls_state.w(2);
-            qsls_state_msg.bQ.x = qsls_state.bQ(0);
-            qsls_state_msg.bQ.y = qsls_state.bQ(1);
-            qsls_state_msg.bQ.z = qsls_state.bQ(2);
-            qsls_state_msg.bL.x = qsls_state.bL(0);
-            qsls_state_msg.bL.y = qsls_state.bL(1);
-            qsls_state_msg.bL.z = qsls_state.bL(2);
+            qsls_state_msg.pQ.x = qsls_obs.state.pQ(0);
+            qsls_state_msg.pQ.y = qsls_obs.state.pQ(1);
+            qsls_state_msg.pQ.z = qsls_obs.state.pQ(2);
+            qsls_state_msg.vQ.x = qsls_obs.state.vQ(0);
+            qsls_state_msg.vQ.y = qsls_obs.state.vQ(1);
+            qsls_state_msg.vQ.z = qsls_obs.state.vQ(2);
+            qsls_state_msg.pL.x = qsls_obs.state.pL(0);
+            qsls_state_msg.pL.y = qsls_obs.state.pL(1);
+            qsls_state_msg.pL.z = qsls_obs.state.pL(2);
+            qsls_state_msg.vL.x = qsls_obs.state.vL(0);
+            qsls_state_msg.vL.y = qsls_obs.state.vL(1);
+            qsls_state_msg.vL.z = qsls_obs.state.vL(2);
+            qsls_state_msg.q.x = qsls_obs.state.q(0);
+            qsls_state_msg.q.y = qsls_obs.state.q(1);
+            qsls_state_msg.q.z = qsls_obs.state.q(2);
+            qsls_state_msg.w.x = qsls_obs.state.w(0);
+            qsls_state_msg.w.y = qsls_obs.state.w(1);
+            qsls_state_msg.w.z = qsls_obs.state.w(2);
+            qsls_state_msg.bQ.x = qsls_obs.state.bQ(0);
+            qsls_state_msg.bQ.y = qsls_obs.state.bQ(1);
+            qsls_state_msg.bQ.z = qsls_obs.state.bQ(2);
+            qsls_state_msg.bL.x = qsls_obs.state.bL(0);
+            qsls_state_msg.bL.y = qsls_obs.state.bL(1);
+            qsls_state_msg.bL.z = qsls_obs.state.bL(2);
+            qsls_state_msg.quat.w = qsls_obs.state.quat.w();
+            qsls_state_msg.quat.x = qsls_obs.state.quat.x();
+            qsls_state_msg.quat.y = qsls_obs.state.quat.y();
+            qsls_state_msg.quat.z = qsls_obs.state.quat.z();
             qsls_observe_pub.publish(qsls_state_msg);
-
+            }
 
             Rate.sleep();
         }

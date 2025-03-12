@@ -166,6 +166,10 @@ namespace controller
       // ------------------------
 
       // Extract vectors from input
+      if (!state.updated)
+      {
+        return;
+      }
       Eigen::Vector3d hat_pQ = state.pQ;
       Eigen::Vector3d hat_vQ = state.vQ;
       Eigen::Vector3d hat_pL = state.pL;
@@ -404,6 +408,7 @@ namespace controller
       }
       control_input.thrust = T;
       control_input.omega = Omega;
+      state.updated = false;
       // control_input.omega = dwd_n;
     }
   };

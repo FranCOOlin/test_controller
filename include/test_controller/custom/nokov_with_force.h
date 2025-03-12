@@ -14,7 +14,7 @@ public:
     Eigen::Vector3d fc;       // 力测量值（3D 向量）
     double time;                // 时间戳
     // 构造函数：初始化位置、姿态和更新标志
-    NokovWithForce() : p(Eigen::Vector3d::Zero()), attitude(Eigen::Quaterniond::Identity()) {}
+    NokovWithForce() : p(Eigen::Vector3d::Zero()), attitude(Eigen::Quaterniond::Identity()) {updated = false;}
 
 };
 

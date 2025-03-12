@@ -60,18 +60,18 @@ namespace observer
             double t = measurement.time;
             if(last_update_time < 0)
             {
-                last_update_time = t;
+                if(measurement.updated){
+                    last_update_time = t;
+                }
                 return;
             }
+            
             if(t - last_update_time < 1e-6)
-            {
-                return;
+            {   
+                return; // no data updated
             }
-            double t_start = ros::Time::now().toSec();
+            // ROS_INFO("Observer update: t = %f", last_update_time);
             integrator.step(int_vec, 0.0, t - last_update_time);
-            double t_end = ros::Time::now().toSec();
-            ROS_INFO("Integration time: %f", t_end - t_start);
-            ROS_INFO("time interval: %f", t - last_update_time);
             state.pQ = Eigen::Vector3d(int_vec.data());
             state.vQ = Eigen::Vector3d(int_vec.data() + 3);
             state.pL = Eigen::Vector3d(int_vec.data() + 6);
@@ -80,7 +80,10 @@ namespace observer
             state.bL = Eigen::Vector3d(int_vec.data() + 15);
             state.q = (state.pL-state.pQ).normalized();
             state.w = (state.pL-state.pQ).cross(state.vL-state.vQ)/(state.pL-state.pQ).squaredNorm();
+            state.quat = measurement.attitude;
+            state.R = state.quat.toRotationMatrix();
             state.updated = true;
+            measurement.updated = false;
             last_update_time = t;
         }
 

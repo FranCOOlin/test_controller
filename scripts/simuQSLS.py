@@ -2,7 +2,8 @@
 
 import rospy
 import numpy as np
-from test_controller.msg import UAVCommand, QSLSState
+from test_controller.msg import UAVCommand, QSLSState, UAVState
+from geometry_msgs.msg import Vector3Stamped
 from scipy.integrate import ode
 from numpy.linalg import norm
 
@@ -25,17 +26,19 @@ class QSLS():
         self.mq = mq
         self.g = 9.81
         self.l = l
+        self.bQ = np.array([-0.4, 0.3, 0.4]).reshape([3, 1])
+        self.bL = np.array([-0.1, -0.2, 0.5]).reshape([3, 1])
 
     def simu(self, action):
         self.solver.set_initial_value(self.currentState, 0.0)
-        self.solver.set_f_params(action, self.ml, self.mq, self.g, self.l)
+        self.solver.set_f_params(action, self.ml, self.mq, self.g, self.l,self.bQ,self.bL)
         self.currentState = self.solver.integrate(self.dt)
         if self.solver.successful():
             return self.currentState
         else:
             return None
 
-    def fun(self, t, state, action, ml, mq, g, l):
+    def fun(self, t, state, action, ml, mq, g, l,bQ,bL):
         e3 = np.array([0, 0, 1]).reshape([3, 1])
         pl = state[0:3].reshape([3, 1])
         vl = state[3:6].reshape([3, 1])
@@ -52,9 +55,9 @@ class QSLS():
         T = action[0]
         Omega = np.array(action[1:4]).reshape([3, 1])
         f = - T * np.dot(R, e3)
-        dot_w = - 1/(mq*l)*np.dot(S(q),f)
+        dot_w = - 1/(mq*l)*np.dot(S(q),f)+np.dot(S(q),(bQ+bL))/l
         dot_q = -np.dot(S(q),w)
-        dot_vl = 1/(mq+ml)*q*np.dot(q.T,f) - mq*l/(mq+mq)*norm(w)**2*q + g*e3
+        dot_vl = 1/(mq+ml)*q*np.dot(q.T,f) - mq*l/(mq+mq)*norm(w)**2*q + g*e3+bL-mq*q*np.dot(q.T,bQ+bL)/(mq+ml)
         dot_pl = vl
         dot_quadAtt = 0.5 * np.dot(np.hstack([np.vstack([0, Omega]), np.vstack([-Omega.T, -S(Omega)])]), quadAtt)
         f = np.concatenate([dot_pl, dot_vl, dot_q, dot_w, dot_quadAtt])
@@ -88,10 +91,16 @@ class QSLSSimulatorNode:
         self.control_sub = rospy.Subscriber(uav_id + '/control', UAVCommand, self.control_callback)
 
         # 发布状态
-        self.state_pub = rospy.Publisher(uav_id + '/qsls_state', QSLSState, queue_size=10)
+        self.state_pub = rospy.Publisher(uav_id + '/qsls_feedback', QSLSState, queue_size=10)
+
+        # 发布无人机状态
+        self.uav_state_pub = rospy.Publisher(uav_id + '/quadrotor_feedback', UAVState, queue_size=10)
+
+        # 发布绳子上拉力
+        self.cable_force_pub = rospy.Publisher(uav_id + '/cable_force', Vector3Stamped, queue_size=10)
 
         # 控制输入
-        self.control_input = [self.simu_model.g*(self.simu_model.mq+self.simu_model.ml), 0, 0, 0]
+        self.control_input = [self.simu_model.g*(self.simu_model.mq+self.simu_model.ml), 0, 0, 0] # 先平衡重力,以免在仿真开始时出现不稳定
         # 仿真频率
         self.rate = rospy.Rate(self.simuRate)  # Adjust frequency as needed
 
@@ -109,9 +118,11 @@ class QSLSSimulatorNode:
             #归一化q
             q = state[6:9].reshape([3, 1])
             q = q/norm(q)
+
             state[6:9] = q.reshape([3,])
             # 发布状态
             if state is not None:
+                # 发布QSLS状态
                 stateTopic = QSLSState()
                 stateTopic.pL.x = state[0]
                 stateTopic.pL.y = state[1]
@@ -141,8 +152,45 @@ class QSLSSimulatorNode:
                 stateTopic.quat.x = state[13]
                 stateTopic.quat.y = state[14]
                 stateTopic.quat.z = state[15]
+                stateTopic.bQ.x = self.simu_model.bQ[0]
+                stateTopic.bQ.y = self.simu_model.bQ[1]
+                stateTopic.bQ.z = self.simu_model.bQ[2]
+                stateTopic.bL.x = self.simu_model.bL[0]
+                stateTopic.bL.y = self.simu_model.bL[1]
+                stateTopic.bL.z = self.simu_model.bL[2]
                 # rospy.loginfo("State: %s", stateTopic)
                 self.state_pub.publish(stateTopic)
+
+                # 发布无人机状态
+                uavState = UAVState()
+                uavState.position.x = pQ[0]
+                uavState.position.y = pQ[1]
+                uavState.position.z = pQ[2]
+                uavState.attitude.w = state[12]
+                uavState.attitude.x = state[13]
+                uavState.attitude.y = state[14]
+                uavState.attitude.z = state[15]
+                uavState.velocity.x = vQ[0]
+                self.uav_state_pub.publish(uavState)
+
+                # 发布绳子上拉力
+                cableForce = Vector3Stamped()
+                quadAtt = np.array([state[12], state[13], state[14], state[15]])
+                R = np.array([
+                [-2 * (quadAtt[2]**2 + quadAtt[3]**2) + 1, 2 * (quadAtt[1] * quadAtt[2] - quadAtt[3] * quadAtt[0]), 2 * (quadAtt[1] * quadAtt[3] + quadAtt[2] * quadAtt[0])],
+                [2 * (quadAtt[1] * quadAtt[2] + quadAtt[3] * quadAtt[0]), -2 * (quadAtt[1]**2 + quadAtt[3]**2) + 1, 2 * (quadAtt[2] * quadAtt[3] - quadAtt[1] * quadAtt[0])],
+                [2 * (quadAtt[1] * quadAtt[3] - quadAtt[2] * quadAtt[0]), 2 * (quadAtt[2] * quadAtt[3] + quadAtt[1] * quadAtt[0]), -2 * (quadAtt[1]**2 + quadAtt[2]**2) + 1]
+                ])
+                r = R.dot(np.array([0, 0, 1]))
+                F = -self.control_input[0]*r
+                Fc = self.simu_model.ml*q*q.T.dot(F)/(self.simu_model.mq+self.simu_model.ml)-self.simu_model.mq*self.simu_model.l/(self.simu_model.mq+self.simu_model.ml)*norm(w)**2*q-self.simu_model.mq*self.simu_model.ml/(self.simu_model.mq+self.simu_model.ml)*q*np.dot(q.T,(self.simu_model.bQ+self.simu_model.bL))
+                Fc = R.T.dot(Fc)
+                cableForce.header.stamp = rospy.Time.now()
+                cableForce.vector.x = Fc[0]
+                cableForce.vector.y = Fc[1]
+                cableForce.vector.z = Fc[2]
+                self.cable_force_pub.publish(cableForce)
+
 
             self.rate.sleep()
 
