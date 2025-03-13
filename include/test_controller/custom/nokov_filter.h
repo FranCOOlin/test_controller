@@ -71,24 +71,24 @@ public:
     void calculateState(Eigen::Vector3d& p, Eigen::Vector3d& vi, Eigen::Vector3d& vb, Eigen::Matrix3d& R, Eigen::Vector3d& omega,
         Eigen::Vector3d& p_current, Eigen::Quaterniond& q_current, Eigen::Vector3d& p_old, Eigen::Matrix3d R_old, Eigen::Vector3d vi_old, Eigen::Vector3d omega_old, double last_time, bool zDown = false) {
         // 固定旋转矩阵 R1
-        Eigen::Matrix3d R1;
-        R1 << 1, 0,  0,
-            0, -1, 0,
-            0,  0, -1;
+        // Eigen::Matrix3d R1;
+        // R1 << 1, 0,  0,
+        //     0, -1, 0,
+        //     0,  0, -1;
 
-        // 当前旋转矩阵
-        if (zDown||simu)
-        {
+        // // 当前旋转矩阵
+        // if (zDown||simu)
+        // {
             R = q2R(q_current);
             p = p_current;
-        }
-        else{
-            R = R1 * q2R(q_current) * R1.transpose();
-            p = R1 * p_current;
-            p_current = p;
-            Eigen::Quaterniond q(R);
-            q_current = q;
-        }
+        // }
+        // else{
+        //     R = R1 * q2R(q_current) * R1.transpose();
+        //     p = R1 * p_current;
+        //     p_current = p;
+        //     Eigen::Quaterniond q(R);
+        //     q_current = q;
+        // }
         
 
         // 时间增量
@@ -157,7 +157,7 @@ public:
         state.p = position_median;
         state.vi = velocity_median;
         state.vb = vb;
-        state.q = Eigen::Vector4d(measurement.attitude.w(), measurement.attitude.x(), measurement.attitude.y(), measurement.attitude.z());
+        state.q = measurement.attitude;
         state.R = R;
         state.omega = omega;
         state.euler = R.eulerAngles(2, 1, 0);

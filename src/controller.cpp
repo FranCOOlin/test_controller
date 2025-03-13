@@ -87,8 +87,8 @@ void stateCallback(const std_msgs::Float64MultiArray::ConstPtr &msg, common::Qua
 
   state.p = state_vector.segment(0, 3);
   state.vi = state_vector.segment(3, 3);
-  state.q = state_vector.segment(6, 4);
-  state.R = Eigen::Quaterniond(state.q(0), state.q(1), state.q(2), state.q(3)).toRotationMatrix(); // q: w x y z
+  state.q = Eigen::Quaterniond(state_vector(6), state_vector(7), state_vector(8), state_vector(9)); // q: w x y z
+  state.R = state.q.toRotationMatrix(); // q: w x y z
   state.euler = state.R.eulerAngles(2, 1, 0);
   state.updated = true;
   bool updated = state.updated;
@@ -107,8 +107,8 @@ void simuStateCallback(const std_msgs::Float64MultiArray::ConstPtr &msg, common:
 
   state.p = state_vector.segment(0, 3);
   state.vi = state_vector.segment(3, 3);
-  state.q = state_vector.segment(6, 4);
-  state.R = Eigen::Quaterniond(state.q(0), state.q(1), state.q(2), state.q(3)).toRotationMatrix(); // q: w x y z
+  state.q = Eigen::Quaterniond(state_vector(6), state_vector(7), state_vector(8), state_vector(9)); // q: w x y z
+  state.R = state.q.toRotationMatrix(); // q: w x y z
   state.euler = state.R.eulerAngles(2, 1, 0);
   state.updated = true;
   // ROS_INFO("Quadrotor State updated: pos = [%+.5f, %+.5f, %+.5f]", state.p(0), state.p(1), state.p(2));
@@ -367,7 +367,10 @@ int main(int argc, char **argv)
       ros::spinOnce();
       // 运行控制器
       qsls_ctrl.control_input.thrust = qsls_ctrl.params.g * (qsls_ctrl.params.QSLS_bar_mL + qsls_ctrl.params.QSLS_bar_mQ); // 先置为重力
+      double t_start = ros::Time::now().toSec();
       scheduler.run();
+      double t_end = ros::Time::now().toSec();
+      ROS_INFO("Controller time: %f", t_end - t_start);
       // 发送控制指令
       test_controller::UAVCommand command_msg;
       command_msg.thrust = control_input.thrust;
