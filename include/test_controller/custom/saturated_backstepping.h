@@ -400,15 +400,18 @@ namespace controller
       // Now we can design Omega
 
       Eigen::Vector3d Omega = -S(e3)*S(e3)*(hw*Td/(hr*bar_mQ*hat_l)*S(e3)*R.transpose()*zw+Td/(hr*(bar_mQ+bar_mL))*S(e3)*R.transpose()*hat_q*hat_q.transpose()*P_V3_P_zv.transpose()+R.transpose()*S(r3d)*dr3d_0+2*kr/(hr*(1.0+r3.transpose()*r3d))*S(e3)*R.transpose()*r3d);
+      T = clamp(T, 0, params.max_thrust);
+      control_input.thrust = T;
+      control_input.omega = Omega;
       if(use_polyval) {
         T = clamp(polyval(T*1000/9.8,p1),0,1.0);
         Omega(0) = clamp(sign(Omega(0))*polyval(abs(Omega(0)), p3),-3.14,3.14);
         Omega(1) = clamp(sign(Omega(1))*polyval(abs(Omega(1)), p2),-3.14,3.14);
         Omega(2) = clamp(0*sign(Omega(2))*polyval(abs(Omega(2)), p4),-3.14,3.14);
       }
-      control_input.thrust = T;
-      control_input.omega = Omega;
-      state.updated = false;
+      control_input.mavlink_thrust = T;
+      control_input.mavlink_omega = Omega;
+      state.updated = false; // 等待下一次状态更新
       // control_input.omega = dwd_n;
     }
   };

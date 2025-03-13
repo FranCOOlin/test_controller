@@ -101,20 +101,20 @@ public:
     Eigen::Vector3d omega;
     double yaw = state.euler(0);
     omega = - S(e3)*S(e3)*(state.R.transpose()*S(r3d)*dr3d + kr/hr*S(e3)*state.R.transpose()*r3d + Td/(mq*hr)*S(e3)*state.R.transpose()*(b*zp+zv)) - 0.1*(yaw-1.57)*e3;
+
+    T = clamp(T, 0, params.max_thrust);
+    control_input.thrust = T;
+    control_input.omega = omega;
     if(use_polyval) {
-      output(0) = clamp(polyval(T*1000/9.8,p1),0,1);
-      output(1) = clamp(sign(omega(0))*polyval(abs(omega(0)), p3),-3.14,3.14);
-      output(2) = clamp(sign(omega(1))*polyval(abs(omega(1)), p2),-3.14,3.14);
-      output(3) = clamp(0*sign(omega(2))*polyval(abs(omega(2)), p4),-3.14,3.14);
+      T = clamp(polyval(T*1000/9.8,p1),0,1.0);
+      omega(0) = clamp(sign(omega(0))*polyval(abs(omega(0)), p3),-3.14,3.14);
+      omega(1) = clamp(sign(omega(1))*polyval(abs(omega(1)), p2),-3.14,3.14);
+      omega(2) = clamp(0*sign(omega(2))*polyval(abs(omega(2)), p4),-3.14,3.14);
     }
-    else {
-      output(0) = T;
-      output(1) = omega(0);
-      output(2) = omega(1);
-      output(3) = omega(2);
-    }
-    control_input.thrust = output(0);
-    control_input.omega = output.tail(3);
+    control_input.mavlink_thrust = T;
+    control_input.mavlink_omega = omega;
+    state.updated = false; // 等待下一次状态更新
+    // control_input.omega = dwd_n;
   }
 };
 

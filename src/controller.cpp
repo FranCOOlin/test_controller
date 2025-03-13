@@ -115,25 +115,20 @@ void simuStateCallback(const std_msgs::Float64MultiArray::ConstPtr &msg, common:
   // state.setState(state_vector.segment(0, 3), state_vector.segment(3, 3), state_vector.segment(6, 3),);
   // ROS_INFO("Control state updated: pos = %f", state.controller_pos);
 }
-void QSLSStateCallback(const std_msgs::Float64MultiArray::ConstPtr &msg, common::QSLSState &state)
+void QSLSStateCallback(const test_controller::QSLSState::ConstPtr &msg, common::QSLSState &state)
 {
-  if (msg->data.size() != 22)
-  {
-    // 需要传输22维的向量,包含系统的完整状态变量
-    ROS_WARN("Invalid state message: expected 3 elements, received %lu", msg->data.size());
-    return;
-  }
-  Eigen::Map<const Eigen::VectorXd> state_vector(msg->data.data(), msg->data.size());
-  state.pL = state_vector.segment(0, 3);
-  state.vL = state_vector.segment(3, 3);
-  state.q = state_vector.segment(6, 3);
-  state.w = state_vector.segment(9, 3);
-  // TODO add pQ vQ
-  state.quat = Eigen::Quaterniond(state_vector(6), state_vector(7), state_vector(8), state_vector(9));
-  state.bL = state_vector.segment(16, 3);
-  state.bQ = state_vector.segment(19, 3);
+  state.pL = Eigen::Vector3d(msg->pL.x, msg->pL.y, msg->pL.z);
+  state.vL = Eigen::Vector3d(msg->vL.x, msg->vL.y, msg->vL.z);
+  state.q = Eigen::Vector3d(msg->q.x, msg->q.y, msg->q.z);
+  state.w = Eigen::Vector3d(msg->w.x, msg->w.y, msg->w.z);
+  state.pQ = Eigen::Vector3d(msg->pQ.x, msg->pQ.y, msg->pQ.z);
+  state.vQ = Eigen::Vector3d(msg->vQ.x, msg->vQ.y, msg->vQ.z);
+  state.quat = Eigen::Quaterniond(msg->quat.w, msg->quat.x, msg->quat.y, msg->quat.z);
+  state.R = state.quat.toRotationMatrix();
+  state.bL = Eigen::Vector3d(msg->bL.x, msg->bL.y, msg->bL.z);
+  state.bQ = Eigen::Vector3d(msg->bQ.x, msg->bQ.y, msg->bQ.z);
   state.updated = true;
-  ROS_INFO("State updated: pos = [%+.5f, %+.5f, %+.5f]", state.pL(0), state.pL(1), state.pL(2));
+  ROS_INFO("QSLS State updated: pos = [%+.5f, %+.5f, %+.5f]", state.pL(0), state.pL(1), state.pL(2));
 }
 void simuQSLSStateCallback(const test_controller::QSLSState::ConstPtr &msg, common::QSLSState &state)
 {
@@ -308,7 +303,7 @@ int main(int argc, char **argv)
 
     // 订阅状态反馈话题，使用 std::bind 和 std::ref 传入对象引用
     ros::Subscriber state_sub = nh.subscribe<std_msgs::Float64MultiArray>(uav_id + "/quadrotor_state", 10, std::bind(stateCallback, std::placeholders::_1, std::ref(quadrotor_ctrl.state)));
-    ros::Subscriber qsls_state_sub = nh.subscribe<std_msgs::Float64MultiArray>(uav_id + "/qsls_state", 10, std::bind(QSLSStateCallback, std::placeholders::_1, std::ref(qsls_ctrl.state)));
+    ros::Subscriber qsls_state_sub = nh.subscribe<test_controller::QSLSState>(uav_id + "/qsls_state", 10, std::bind(QSLSStateCallback, std::placeholders::_1, std::ref(qsls_ctrl.state)));
 
     // 订阅轨迹话题
     ros::Subscriber traj_sub = nh.subscribe<std_msgs::Float64MultiArray>(uav_id + "/trajectory", 10, std::bind(trajCallback, std::placeholders::_1, std::ref(quadrotor_ctrl.trajectory)));
@@ -329,12 +324,20 @@ int main(int argc, char **argv)
       Eigen::VectorXd control_signal(4);
       scheduler.run();
       // 控制器同时只能发布一个控制指令(因为执行对象只有一个)
-      control_signal(0) = control_input.thrust;
-      control_signal(1) = control_input.omega(0);
-      control_signal(2) = control_input.omega(1);
-      control_signal(3) = control_input.omega(2);
-      // 发送控制指令
+      control_signal(0) = control_input.mavlink_thrust;
+      control_signal(1) = control_input.mavlink_omega(0);
+      control_signal(2) = control_input.mavlink_omega(1);
+      control_signal(3) = control_input.mavlink_omega(2);
+      // 发送控制指令到飞控
       sendCommandMavros(control_signal, local_rate_pub, local_thrust_pub);
+      
+      test_controller::UAVCommand command_msg;
+      command_msg.thrust = control_input.thrust;
+      command_msg.omega.x = control_input.omega(0);
+      command_msg.omega.y = control_input.omega(1);
+      command_msg.omega.z = control_input.omega(2);
+      // 发送控制指令到仿真环境
+      control_pub.publish(command_msg);
       Rate.sleep();
     }
   }

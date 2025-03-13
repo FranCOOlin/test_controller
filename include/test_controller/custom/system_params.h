@@ -15,7 +15,7 @@ namespace common
     {
     public:
         // Global param
-        double g;
+        double g,max_thrust;
         // For quadrotor controller of ganyu
         double quadrotor_mq, quadrotor_kp, quadrotor_kv, quadrotor_kr, quadrotor_hr;
 
@@ -231,6 +231,7 @@ namespace common
                 QSLS_hr = paramDict["controller"]["QSLS"]["hr"].get<double>();
                 QSLS_kr = paramDict["controller"]["QSLS"]["kr"].get<double>();
                 g = paramDict["controller"]["g"].get<double>();
+                max_thrust = paramDict["controller"]["max_thrust"].get<double>();
                 use_polyval = paramDict["controller"]["use_polyval"].get<bool>();
                 p1 = Eigen::Map<const Eigen::VectorXd>(paramDict["controller"]["p1"].get<std::vector<double>>().data(), paramDict["controller"]["p1"].size());
                 p2 = Eigen::Map<const Eigen::VectorXd>(paramDict["controller"]["p2"].get<std::vector<double>>().data(), paramDict["controller"]["p2"].size());

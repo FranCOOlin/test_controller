@@ -1,6 +1,7 @@
 {
     "controller": {
         "g": 9.81,
+        "max_thrust": 20.0,
         "quadrotor": {
             "mq": 0.618,
             "kp": 9.75,
