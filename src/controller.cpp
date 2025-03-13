@@ -349,14 +349,11 @@ int main(int argc, char **argv)
     ros::Subscriber qsls_state_sub = nh.subscribe<test_controller::QSLSState>(uav_id + "/qsls_state", 10, std::bind(simuQSLSStateCallback, std::placeholders::_1, std::ref(qsls_ctrl.state)));
 
     // 订阅轨迹话题
-    ros::Subscriber traj_sub = nh.subscribe<std_msgs::Float64MultiArray>("trajectory", 10,
-                                                                         std::bind(trajCallback, std::placeholders::_1, std::ref(quadrotor_ctrl.trajectory)));
+    ros::Subscriber traj_sub = nh.subscribe<std_msgs::Float64MultiArray>("trajectory", 10,std::bind(trajCallback, std::placeholders::_1, std::ref(quadrotor_ctrl.trajectory)));
 
     // 订阅其它话题
-    ros::Subscriber controller_sw_sub = nh.subscribe<std_msgs::Int32>(uav_id + "/controller_sw", 10,
-                                                                      std::bind(controllerSWCallback, std::placeholders::_1, std::ref(scheduler)));
-    ros::Subscriber traj_switch_sub = nh.subscribe<std_msgs::String>("trajswitch", 10,
-                                                                     std::bind(trajSwitchCallback, std::placeholders::_1, std::ref(quadrotor_ctrl.trajectory)));
+    ros::Subscriber controller_sw_sub = nh.subscribe<std_msgs::Int32>(uav_id + "/controller_sw", 10,std::bind(controllerSWCallback, std::placeholders::_1, std::ref(scheduler)));
+    ros::Subscriber traj_switch_sub = nh.subscribe<std_msgs::String>("trajswitch", 10,std::bind(trajSwitchCallback, std::placeholders::_1, std::ref(quadrotor_ctrl.trajectory)));
 
     ros::Rate Rate(controller_rate);
 

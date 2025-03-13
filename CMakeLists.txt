@@ -246,6 +246,7 @@ catkin_install_python(PROGRAMS
   scripts/simuQSLS.py
   scripts/simu.py
   scripts/rebootFC.py
+  scripts/topic_save.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
