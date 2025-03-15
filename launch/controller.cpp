@@ -128,7 +128,7 @@ void QSLSStateCallback(const test_controller::QSLSState::ConstPtr &msg, common::
   state.bL = Eigen::Vector3d(msg->bL.x, msg->bL.y, msg->bL.z);
   state.bQ = Eigen::Vector3d(msg->bQ.x, msg->bQ.y, msg->bQ.z);
   state.updated = true;
-  // ROS_INFO("QSLS State updated: pos = [%+.5f, %+.5f, %+.5f]", state.pL(0), state.pL(1), state.pL(2));
+  ROS_INFO("NokovFilter: pos = [%+.5f, %+.5f, %+.5f]", state.pL(0), state.pL(1), state.pL(2));
 }
 void simuQSLSStateCallback(const test_controller::QSLSState::ConstPtr &msg, common::QSLSState &state)
 {
@@ -143,7 +143,7 @@ void simuQSLSStateCallback(const test_controller::QSLSState::ConstPtr &msg, comm
   state.bL = Eigen::Vector3d(msg->bL.x, msg->bL.y, msg->bL.z);
   state.bQ = Eigen::Vector3d(msg->bQ.x, msg->bQ.y, msg->bQ.z);
   state.updated = true;
-  // ROS_INFO("QSLS State updated: pos = [%+.5f, %+.5f, %+.5f]", state.pL(0), state.pL(1), state.pL(2));
+  ROS_INFO("NokovFilter: pos = [%+.5f, %+.5f, %+.5f]", state.pL(0), state.pL(1), state.pL(2));
 }
 
 void trajCallback(const std_msgs::Float64MultiArray::ConstPtr &msg, common::MyTrajectory &trajectory)

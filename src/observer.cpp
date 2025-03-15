@@ -199,7 +199,7 @@ int main(int argc, char **argv)
     observer::ObserverScheduler scheduler;
     scheduler.registerObserver(&quadrotor_obs);
     scheduler.registerObserver(&qsls_obs);
-    scheduler.switchObserver(quadrotor_obs); // 直接传入 Observer 对象
+    scheduler.switchObserver(qsls_obs); // 直接传入 Observer 对象
 
     if (!simu)
     {

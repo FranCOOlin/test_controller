@@ -34,7 +34,7 @@
 
     </node>
     <!-- 启动 Observer 节点 -->
-    <node pkg="test_controller" type="observer" name="observer" output="screen">
+    <node pkg="test_controller" type="observer" name="observer" output="log">
         <param name="observer_param" value="some_value" />
         <param name="uav_id" value="$(arg uav_id)" />
         <param name="simulation" value="$(arg simulation)" />
