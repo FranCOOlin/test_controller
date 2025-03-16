@@ -17,7 +17,7 @@ public:
     Eigen::Vector3d d4pd;
     Eigen::Vector3d d5pd;
     MyTrajectory():
-        pd(Eigen::Vector3d(1,-3,-2)),
+        pd(Eigen::Vector3d(0,0,-0.8)),
         dpd(Eigen::Vector3d::Zero()),
         d2pd(Eigen::Vector3d::Zero()),
         d3pd(Eigen::Vector3d::Zero()),

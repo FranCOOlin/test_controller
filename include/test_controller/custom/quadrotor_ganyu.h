@@ -81,7 +81,7 @@ public:
     Eigen::Vector3d e3(0, 0, 1);
     // 计算位置和速度误差
     double b =0.5;
-    Eigen::Vector3d zp = state.p;
+    Eigen::Vector3d zp = state.p - trajectory.pd;
     double nzp = zp.norm();
     Eigen::Vector3d zv = state.vi - trajectory.dpd;
     double nzv = zv.norm();

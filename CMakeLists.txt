@@ -54,6 +54,7 @@ add_message_files(
   UAVState.msg
   UAVCommand.msg
   QSLSState.msg
+  TrajPoint.msg
   Float64MultiArrayWithHeader.msg
 )
 

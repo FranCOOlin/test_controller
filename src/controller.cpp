@@ -33,6 +33,8 @@
 #include <test_controller/UAVState.h>
 #include <test_controller/UAVCommand.h>
 #include <test_controller/QSLSState.h>
+#include <test_controller/TrajPoint.h>
+
 
 // ---------- 全局变量 ----------
 // 全局 MAVROS 状态，由 MAVROS 状态话题回调更新
@@ -146,8 +148,15 @@ void simuQSLSStateCallback(const test_controller::QSLSState::ConstPtr &msg, comm
   // ROS_INFO("QSLS State updated: pos = [%+.5f, %+.5f, %+.5f]", state.pL(0), state.pL(1), state.pL(2));
 }
 
-void trajCallback(const std_msgs::Float64MultiArray::ConstPtr &msg, common::MyTrajectory &trajectory)
+void trajCallback(const test_controller::TrajPoint::ConstPtr &msg, common::MyTrajectory &trajectory)
 {
+  Eigen::Map<const Eigen::VectorXd> state_vector(msg->data.data(), msg->data.size());
+  trajectory.pd = state_vector.segment(0, 3);
+  trajectory.dpd = state_vector.segment(3, 3);
+  trajectory.d2pd = state_vector.segment(6, 3);
+  trajectory.d3pd = state_vector.segment(9, 3);
+  trajectory.d4pd = state_vector.segment(12, 3);
+  trajectory.d5pd = state_vector.segment(15, 3);
   // trajectory.setWaypoints(Eigen::Map<Eigen::VectorXd>(msg->data.data(), msg->data.size()));
   // ROS_INFO("Trajectory updated: received %lu waypoints", trajectory.waypoints.size());
 }
@@ -280,7 +289,7 @@ int main(int argc, char **argv)
   controller::ControllerScheduler scheduler;
   scheduler.registerController(&quadrotor_ctrl);
   scheduler.registerController(&qsls_ctrl);
-  scheduler.switchController(qsls_ctrl);
+  scheduler.switchController(quadrotor_ctrl);
 
   if (!simu)
   {
@@ -306,7 +315,7 @@ int main(int argc, char **argv)
     ros::Subscriber qsls_state_sub = nh.subscribe<test_controller::QSLSState>(uav_id + "/qsls_state", 10, std::bind(QSLSStateCallback, std::placeholders::_1, std::ref(qsls_ctrl.state)));
 
     // 订阅轨迹话题
-    ros::Subscriber traj_sub = nh.subscribe<std_msgs::Float64MultiArray>(uav_id + "/trajectory", 10, std::bind(trajCallback, std::placeholders::_1, std::ref(quadrotor_ctrl.trajectory)));
+    ros::Subscriber traj_sub = nh.subscribe<test_controller::TrajPoint>(uav_id + "/trajectory", 10, std::bind(trajCallback, std::placeholders::_1, std::ref(quadrotor_ctrl.trajectory)));
 
     // 订阅其他话题
     ros::Subscriber traj_switch_sub = nh.subscribe<std_msgs::String>(uav_id + "/trajswitch", 10, std::bind(trajSwitchCallback, std::placeholders::_1, std::ref(quadrotor_ctrl.trajectory)));
@@ -352,7 +361,7 @@ int main(int argc, char **argv)
     ros::Subscriber qsls_state_sub = nh.subscribe<test_controller::QSLSState>(uav_id + "/qsls_state", 10, std::bind(simuQSLSStateCallback, std::placeholders::_1, std::ref(qsls_ctrl.state)));
 
     // 订阅轨迹话题
-    ros::Subscriber traj_sub = nh.subscribe<std_msgs::Float64MultiArray>("trajectory", 10,std::bind(trajCallback, std::placeholders::_1, std::ref(quadrotor_ctrl.trajectory)));
+    ros::Subscriber traj_sub = nh.subscribe<test_controller::TrajPoint>("trajectory", 10,std::bind(trajCallback, std::placeholders::_1, std::ref(quadrotor_ctrl.trajectory)));
 
     // 订阅其它话题
     ros::Subscriber controller_sw_sub = nh.subscribe<std_msgs::Int32>(uav_id + "/controller_sw", 10,std::bind(controllerSWCallback, std::placeholders::_1, std::ref(scheduler)));

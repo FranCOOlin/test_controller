@@ -175,8 +175,6 @@ int main(int argc, char **argv)
     ros::param::get("~observer_rate", observer_rate);
     // 读取传入参数结束
 
-    // 创建一个话题发布者，发布类型为 test_controller::UAVState
-    ros::Publisher pub = nh.advertise<test_controller::UAVState>("observer_topic", 10);
 
     // 创建统一对象
     common::SystemParams params;
@@ -199,7 +197,7 @@ int main(int argc, char **argv)
     observer::ObserverScheduler scheduler;
     scheduler.registerObserver(&quadrotor_obs);
     scheduler.registerObserver(&qsls_obs);
-    scheduler.switchObserver(qsls_obs); // 直接传入 Observer 对象
+    scheduler.switchObserver(quadrotor_obs); // 直接传入 Observer 对象
 
     if (!simu)
     {
