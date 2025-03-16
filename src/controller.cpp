@@ -150,13 +150,13 @@ void simuQSLSStateCallback(const test_controller::QSLSState::ConstPtr &msg, comm
 
 void trajCallback(const test_controller::TrajPoint::ConstPtr &msg, common::MyTrajectory &trajectory)
 {
-  Eigen::Map<const Eigen::VectorXd> state_vector(msg->data.data(), msg->data.size());
-  trajectory.pd = state_vector.segment(0, 3);
-  trajectory.dpd = state_vector.segment(3, 3);
-  trajectory.d2pd = state_vector.segment(6, 3);
-  trajectory.d3pd = state_vector.segment(9, 3);
-  trajectory.d4pd = state_vector.segment(12, 3);
-  trajectory.d5pd = state_vector.segment(15, 3);
+  trajectory.pd = Eigen::Vector3d(msg->pd.x, msg->pd.y, msg->pd.z);
+  trajectory.dpd = Eigen::Vector3d(msg->dpd.x, msg->dpd.y, msg->dpd.z);
+  trajectory.d2pd = Eigen::Vector3d(msg->d2pd.x, msg->d2pd.y, msg->d2pd.z);
+  trajectory.d3pd = Eigen::Vector3d(msg->d3pd.x, msg->d3pd.y, msg->d3pd.z);
+  trajectory.d4pd = Eigen::Vector3d(msg->d4pd.x, msg->d4pd.y, msg->d4pd.z);
+  trajectory.d5pd = Eigen::Vector3d(msg->d5pd.x, msg->d5pd.y, msg->d5pd.z);  
+  
   // trajectory.setWaypoints(Eigen::Map<Eigen::VectorXd>(msg->data.data(), msg->data.size()));
   // ROS_INFO("Trajectory updated: received %lu waypoints", trajectory.waypoints.size());
 }
