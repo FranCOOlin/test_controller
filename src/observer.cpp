@@ -50,7 +50,7 @@ void observerSWCallback(const std_msgs::Int32::ConstPtr &msg, observer::Observer
         }
         else
         {
-            ROS_WARN("Invalid observer switch from %d to %d", scheduler.current_mode, msg->data);
+            // ROS_WARN("Invalid observer switch from %d to %d", scheduler.current_mode, msg->data);
             return;
         }
         break;
@@ -73,12 +73,12 @@ void observerSWCallback(const std_msgs::Int32::ConstPtr &msg, observer::Observer
         }
         else
         {
-            ROS_WARN("Invalid observer switch from %d to %d", scheduler.current_mode, msg->data);
+            // ROS_WARN("Invalid observer switch from %d to %d", scheduler.current_mode, msg->data);
             return;
         }
         break;
     default:
-        ROS_WARN("Invalid observer switch command: %d", msg->data);
+        // ROS_WARN("Invalid observer switch command: %d", msg->data);
         return;
     }
 }
@@ -93,8 +93,8 @@ void feedbackCallback(const geometry_msgs::PoseStamped::ConstPtr &msg, common::N
     Eigen::Matrix3d R1;
     Eigen::Matrix3d R;
     R1 << 1, 0, 0,
-        0, -1, 0,
-        0, 0, -1;
+        0, 1, 0,
+        0, 0, 1;
     R = R1 * quat_.toRotationMatrix() * R1.transpose();
     measurement.p = R1 * p_;
     Eigen::Quaterniond quat(R);
@@ -116,8 +116,8 @@ void QSLSpQFeedbackCallback(const geometry_msgs::PoseStamped::ConstPtr &msg, com
     Eigen::Matrix3d R1;
     Eigen::Matrix3d R;
     R1 << 1, 0, 0,
-        0, -1, 0,
-        0, 0, -1;
+        0, 1, 0,
+        0, 0, 1;
     R = R1 * quat_.toRotationMatrix() * R1.transpose();
     measurement.p = R1 * pQ_;
     Eigen::Quaterniond quat(R);
@@ -205,7 +205,7 @@ int main(int argc, char **argv)
         // 初始化 无人机状态Publisher
         ros::Publisher observe_pub = nh.advertise<std_msgs::Float64MultiArray>(uav_id + "/quadrotor_state", 10);
         // 初始化 QSLS 状态Publisher
-        ros::Publisher qsls_observe_pub = nh.advertise<test_controller::QSLSState>(uav_id + "/qsls_state", 10);
+        ros::Publisher qsls_observe_pub = nh.advertise<test_controller::QSLSState>(uav_id + "/myqsls_state", 10);
         // 订阅动捕反馈话题
         std::string nokov_topic = "/vrpn_client_node/" + uav_id + "/pose";
         ros::Subscriber quadrotor_feedback_sub = nh.subscribe<geometry_msgs::PoseStamped>(nokov_topic, 10, std::bind(feedbackCallback, std::placeholders::_1, std::ref(quadrotor_obs.measurement)));
@@ -220,7 +220,7 @@ int main(int argc, char **argv)
         ros::Subscriber cable_force_sub = nh.subscribe<geometry_msgs::Vector3Stamped>(uav_id + "/cable_force", 10, std::bind(QSLSForceFeedbackCallback, std::placeholders::_1, std::ref(qsls_obs.measurement)));
 
         // 订阅其它话题，使用 std::bind 和 std::ref 传入对象引用
-        ros::Subscriber observer_sw_sub = nh.subscribe<std_msgs::Int32>(uav_id + "/observer_sw", 10,
+        ros::Subscriber observer_sw_sub = nh.subscribe<std_msgs::Int32>(uav_id + "/controller_sw", 10,
                                                                         std::bind(observerSWCallback, std::placeholders::_1, std::ref(scheduler)));
 
         ros::Rate Rate(observer_rate);

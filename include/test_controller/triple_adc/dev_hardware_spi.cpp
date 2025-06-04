@@ -159,7 +159,7 @@ int DEV_HARDWARE_SPI_Mode(SPIMode mode)
     
     //Write device
     if (ioctl(hardware_SPI.fd, SPI_IOC_WR_MODE, &hardware_SPI.mode) == -1) {
-        DEV_HARDWARE_SPI_Debug("can't set spi mode\r\n"); 
+        DEV_HARDWARE_SPI_Debug("can't set spi mode: %s\r\n", strerror(errno));
         return -1;
     }
     return 1;
@@ -217,7 +217,7 @@ int DEV_HARDWARE_SPI_ChipSelect(SPIChipSelect CS_Mode)
     }
     
     if (ioctl(hardware_SPI.fd, SPI_IOC_WR_MODE, &hardware_SPI.mode) == -1) {
-        DEV_HARDWARE_SPI_Debug("can't set spi mode\r\n"); 
+        DEV_HARDWARE_SPI_Debug("can't set spi mode: %s\r\n", strerror(errno));
         return -1;
     }
     return 1;
@@ -304,7 +304,10 @@ uint8_t DEV_HARDWARE_SPI_TransferByte(uint8_t buf)
     tr.len = 1;
     tr.tx_buf =  (unsigned long)&buf;
     tr.rx_buf =  (unsigned long)rbuf;
-    
+    tr.delay_usecs = 0;
+    tr.speed_hz = 0;
+    tr.bits_per_word = 0;
+    tr.cs_change = 0;
     //ioctl Operation, transmission of data
     if ( ioctl(hardware_SPI.fd, SPI_IOC_MESSAGE(1), &tr) < 1 )  
         DEV_HARDWARE_SPI_Debug("can't send spi message\r\n"); 
@@ -313,6 +316,7 @@ uint8_t DEV_HARDWARE_SPI_TransferByte(uint8_t buf)
 
 /******************************************************************************
 function: The SPI port reads a byte
+
 parameter:
 Info: Return read data
 ******************************************************************************/

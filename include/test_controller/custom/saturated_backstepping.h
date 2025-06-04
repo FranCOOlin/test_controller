@@ -380,13 +380,13 @@ namespace controller
       Eigen::Vector3d d_d_dqd_n_n_0 = -PIqd / n_norm_3 * (n_T * dn_0) * d_dn_n_n - 1.0 / n_norm * (dqd_0 * qd_T + qd * dqd_0_T) * d_dn_n_n + PIqd / n_norm * d_d_dn_n_n_0 + n.dot(dn_0) / n_norm_3 * (qd.dot(dn_n) * dqd_n + qd * (dn_n.dot(dqd_n))) - 1.0 / n_norm * (dqd_0_T * dn_n * I + qd_T * d_dn_n_0 * I + dqd_0 * dn_n_T + qd * d_dn_n_0.transpose()) * dqd_n - 1.0 / n_norm * (qd_T * dn_n * I + qd * dn_n_T) * d_dqd_n_0 + 3.0 * PIqd / pow(n_norm, 5) * (n_T * dn_0 * n_T * dn_n) * dn_n + 1.0 / n_norm_3 * (dqd_0 * qd_T + qd * dqd_0_T) * (n_T * dn_n) * dn_n - PIqd / n_norm_3 * d_dn_n_0 * n_T * dn_n - PIqd / n_norm_3 * dn_n * dn_0.transpose() * dn_n - PIqd / n_norm_3 * dn_n * n_T * d_dn_n_0;
 
 
-      ros::Time t_start = ros::Time::now();
+      // ros::Time t_start = ros::Time::now();
       double d_dwd_n_0_temp_1 = kq / hq / pow((1.0 + hat_q.dot(qd)), 2);
       // calculate d_dwd_n_0
       Eigen::Vector3d d_dwd_n_0 = S(dqd_0) * d_dqd_n_n + S_qd * d_d_dqd_n_n_0 - 2.0 * d_dwd_n_0_temp_1 * (hat_q.dot(dqd_0) + qd.dot(dhq_0)) * (S_hat_q * dqd_n - S_qd * S_hat_w * hat_q) + 2.0 * kq / hq / (1.0 + hat_q_T * qd) * (S(dhq_0) * dqd_n + S_hat_q * d_dqd_n_0 - S(dqd_0) * S_hat_w * hat_q - S_qd * S(dhw_0) * hat_q - S_qd * S_hat_w * dhq_0) + 4.0 * kq / hq / pow((1.0 + hat_q_T * qd), 3) * (hat_q_T * dqd_0 + qd_T * dhq_0) * (qd_T * S_hat_w * hat_q + hat_q_T * dqd_n) * S_hat_q * qd - 2.0 * d_dwd_n_0_temp_1 * (dqd_0.dot(S_hat_w * hat_q) + qd.dot(S(dhw_0) * hat_q) + qd.dot(S_hat_w * dhq_0) + dhq_0.dot(dqd_n) + hat_q.dot(d_dqd_n_0)) * S_hat_q * qd - 2.0 * d_dwd_n_0_temp_1 * (qd.dot(S_hat_w * hat_q) + hat_q.dot(dqd_n)) * (S(dhq_0) * qd + S_hat_q * dqd_0) + 1.0 / hq / bar_mt * (dn_n_T * (I / n_norm - n * n_T / n_norm_3) * dn_0 * S_hat_q * gamma + n_T / n_norm * d_dn_n_0 * S_hat_q * gamma + n_T / n_norm * dn_n * S(dhq_0) * gamma + n_T / n_norm * dn_n * S_hat_q * dgamma_0 - n.dot(dn_0) / n_norm * S(gamma) * S_hat_w * hat_q - n_norm * S(dgamma_0) * S_hat_w * hat_q - n_norm * S(gamma) * S(dhw_0) * hat_q - n_norm * S(gamma) * S_hat_w * dhq_0 + beta * n.dot(dn_0) / n_norm * S_hat_q * dsigma_e_ks1 * de_n + beta * n_norm * S(dhq_0) * dsigma_e_ks1 * de_n + beta / ks1 * n_norm * S_hat_q * d2sigma_e_ks1 * diag_de_n * de_0 + beta * n_norm * S_hat_q * dsigma_e_ks1 * d_de_n_0 + n.dot(dn_0) / n_norm * S_hat_q * dzv_n + n_norm * S(dhq_0) * dzv_n + n_norm * S_hat_q * d_dzv_n_0);
 
-      ros::Time t_end = ros::Time::now();
-      ROS_INFO("Time elapsed: %f", (t_end - t_start).toSec());
+      // ros::Time t_end = ros::Time::now();
+      // ROS_INFO("Time elapsed: %f", (t_end - t_start).toSec());
       // calculate d_PqFd_0
 
       Eigen::Vector3d d_PqFd_0 = -(hat_q_T * n * dhq_0 + hat_q * n_T * dhq_0) - hat_q * hat_q_T * dn_0 + 2 * bar_mQ * l * hat_q * hat_w.transpose() * dhw_0 + bar_mQ * l * hat_w_squared_norm * dhq_0 + bar_mQ * hat_q_T * (hat_bQ + hat_bL) * dhq_0 + bar_mQ * hat_q * (hat_bQ + hat_bL).transpose() * dhq_0;

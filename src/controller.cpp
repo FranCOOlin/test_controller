@@ -13,6 +13,7 @@
 #include <mavros_msgs/SetMode.h>
 #include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/Vector3Stamped.h>
 
 #include <functional>
 #include <utility> // std::ref
@@ -29,6 +30,7 @@
 #include "test_controller/custom/quadrotor_state.h"          // MyState 派生类
 #include "test_controller/custom/qsls_state.h"               // MyState 派生类
 #include "test_controller/custom/mytrajectory.h"             // MyTrajectory 派生类
+#include "test_controller/triple_adc/dev_gpio.h"
 // ROS 消息
 #include <test_controller/UAVState.h>
 #include <test_controller/UAVCommand.h>
@@ -39,7 +41,8 @@
 // ---------- 全局变量 ----------
 // 全局 MAVROS 状态，由 MAVROS 状态话题回调更新
 mavros_msgs::State current_state;
-
+//暂时写在这里
+ros::Publisher force_pub;
 // ---------- MAVROS 状态回调 ----------
 void status_cb(const mavros_msgs::State::ConstPtr &msg)
 {
@@ -119,6 +122,7 @@ void simuStateCallback(const std_msgs::Float64MultiArray::ConstPtr &msg, common:
 }
 void QSLSStateCallback(const test_controller::QSLSState::ConstPtr &msg, common::QSLSState &state)
 {
+  // DEV_GPIO_Write(19, DEV_GPIO_HIGH);
   state.pL = Eigen::Vector3d(msg->pL.x, msg->pL.y, msg->pL.z);
   state.vL = Eigen::Vector3d(msg->vL.x, msg->vL.y, msg->vL.z);
   state.q = Eigen::Vector3d(msg->q.x, msg->q.y, msg->q.z);
@@ -130,6 +134,8 @@ void QSLSStateCallback(const test_controller::QSLSState::ConstPtr &msg, common::
   state.bL = Eigen::Vector3d(msg->bL.x, msg->bL.y, msg->bL.z);
   state.bQ = Eigen::Vector3d(msg->bQ.x, msg->bQ.y, msg->bQ.z);
   state.updated = true;
+  // DEV_GPIO_Write(19, DEV_GPIO_LOW);
+
   // ROS_INFO("QSLS State updated: pos = [%+.5f, %+.5f, %+.5f]", state.pL(0), state.pL(1), state.pL(2));
 }
 void simuQSLSStateCallback(const test_controller::QSLSState::ConstPtr &msg, common::QSLSState &state)
@@ -150,13 +156,15 @@ void simuQSLSStateCallback(const test_controller::QSLSState::ConstPtr &msg, comm
 
 void trajCallback(const test_controller::TrajPoint::ConstPtr &msg, common::MyTrajectory &trajectory)
 {
+  // DEV_GPIO_Write(20, DEV_GPIO_HIGH);
   trajectory.pd = Eigen::Vector3d(msg->pd.x, msg->pd.y, msg->pd.z);
   trajectory.dpd = Eigen::Vector3d(msg->dpd.x, msg->dpd.y, msg->dpd.z);
   trajectory.d2pd = Eigen::Vector3d(msg->d2pd.x, msg->d2pd.y, msg->d2pd.z);
   trajectory.d3pd = Eigen::Vector3d(msg->d3pd.x, msg->d3pd.y, msg->d3pd.z);
   trajectory.d4pd = Eigen::Vector3d(msg->d4pd.x, msg->d4pd.y, msg->d4pd.z);
   trajectory.d5pd = Eigen::Vector3d(msg->d5pd.x, msg->d5pd.y, msg->d5pd.z);  
-  
+  // ROS_INFO("Traj updated: pos = [%+.5f, %+.5f, %+.5f]", msg->pd.x, msg->pd.y, msg->pd.z);
+  // DEV_GPIO_Write(20, DEV_GPIO_LOW);
   // trajectory.setWaypoints(Eigen::Map<Eigen::VectorXd>(msg->data.data(), msg->data.size()));
   // ROS_INFO("Trajectory updated: received %lu waypoints", trajectory.waypoints.size());
 }
@@ -174,7 +182,9 @@ void controllerSWCallback(const std_msgs::Int32::ConstPtr &msg,
   switch (msg->data)
   {
   case 0: // ganyu controller
+    if (scheduler.current_mode != 0){
     scheduler.switchController(*scheduler.controllers[0]);
+    }
     break;
   case 1: // qsls controller
     if (scheduler.current_mode == 0)
@@ -208,6 +218,31 @@ int sendCommandMavros(const Eigen::VectorXd &command, ros::Publisher &local_rate
   // ROS_INFO("Control thrust updated: thrust = %f",thrust.thrust);
   return 0;
 }
+// 暂时写在这
+void tempQSLSStateCallback(const test_controller::QSLSState::ConstPtr &msg, common::SystemParams &params, common::QuadrotorControlInput &control_input)
+{
+  Eigen::Vector3d pL = Eigen::Vector3d(msg->pL.x, msg->pL.y, msg->pL.z);
+  Eigen::Vector3d vL = Eigen::Vector3d(msg->vL.x, msg->vL.y, msg->vL.z);
+  Eigen::Vector3d q = Eigen::Vector3d(msg->q.x, msg->q.y, msg->q.z);
+  Eigen::Vector3d w = Eigen::Vector3d(msg->w.x, msg->w.y, msg->w.z);
+  Eigen::Vector3d pQ = Eigen::Vector3d(msg->pQ.x, msg->pQ.y, msg->pQ.z);
+  Eigen::Vector3d vQ = Eigen::Vector3d(msg->vQ.x, msg->vQ.y, msg->vQ.z);
+  Eigen::Quaterniond quat = Eigen::Quaterniond(msg->quat.w, msg->quat.x, msg->quat.y, msg->quat.z);
+  Eigen::Matrix3d R = quat.toRotationMatrix();
+  Eigen::Vector3d bL = Eigen::Vector3d(msg->bL.x, msg->bL.y, msg->bL.z);
+  Eigen::Vector3d bQ = Eigen::Vector3d(msg->bQ.x, msg->bQ.y, msg->bQ.z);
+  Eigen::Vector3d r = R*Eigen::Vector3d(0,0,1.0);
+  Eigen::Vector3d F = -control_input.thrust*r;
+  Eigen::Vector3d Fc = params.QSLS_bar_mL*q*q.dot(F)/(params.QSLS_bar_mL+params.QSLS_bar_mQ)-params.QSLS_bar_mQ*params.QSLS_bar_mL*params.QSLS_l*w.squaredNorm()*q;
+  Fc = R.transpose()*Fc;
+  geometry_msgs::Vector3Stamped fc_msg;
+  fc_msg.vector.x = Fc(0);
+  fc_msg.vector.y = Fc(1);
+  fc_msg.vector.z = Fc(2);
+  fc_msg.header.stamp = ros::Time::now();
+  force_pub.publish(fc_msg);
+  // ROS_INFO("QSLS State updated: pos = [%+.5f, %+.5f, %+.5f]", state.pL(0), state.pL(1), state.pL(2));
+}
 
 int main(int argc, char **argv)
 {
@@ -218,10 +253,12 @@ int main(int argc, char **argv)
   std::string file_path;
   bool simu;
   int controller_rate;
+  int prescaler;
   ros::param::get("~uav_id", uav_id);
   ros::param::get("~simulation", simu);
   ros::param::get("~file_path", file_path);
   ros::param::get("~controller_rate", controller_rate);
+  ros::param::get("~prescaler", prescaler);
   ROS_INFO("Simulation: %s", simu ? "true" : "false");
   if (uav_id.empty())
   {
@@ -251,21 +288,8 @@ int main(int argc, char **argv)
   ROS_INFO("%s controller/quadrotor/kr = %f", uav_id.c_str(), params.quadrotor_kr);
   ROS_INFO("%s controller/quadrotor/hr = %f", uav_id.c_str(), params.quadrotor_hr);
 
-  // // For QSLS saturated backstepping controller
-  // double QSLS_bar_mQ;
-  // double QSLS_bar_mL;
-  // double QSLS_l;
-  // double QSLS_k1;
-  // double QSLS_beta;
-  // double QSLS_ks1;
-  // double QSLS_k2;
-  // double QSLS_ks2;
-  // double QSLS_hq;
-  // double QSLS_kq;
-  // double QSLS_hw;
-  // double QSLS_kw;
-  // double QSLS_hr;
-  // double QSLS_kr;
+  // For QSLS saturated backstepping controller
+
 
   ROS_INFO("%s controller/qsls/bar_mQ = %f", uav_id.c_str(), params.QSLS_bar_mQ);
   ROS_INFO("%s controller/qsls/bar_mQ = %f", uav_id.c_str(), params.QSLS_bar_mQ);
@@ -290,6 +314,10 @@ int main(int argc, char **argv)
   scheduler.registerController(&quadrotor_ctrl);
   scheduler.registerController(&qsls_ctrl);
   scheduler.switchController(quadrotor_ctrl);
+
+  // DEV_GPIO_INIT(17 , DEV_GPIO_OUTPUT,0); // main loop
+  // DEV_GPIO_INIT(19 , DEV_GPIO_OUTPUT,0); // qsls state update
+  // DEV_GPIO_INIT(20 , DEV_GPIO_OUTPUT,0); // trajectory update
 
   if (!simu)
   {
@@ -321,33 +349,44 @@ int main(int argc, char **argv)
     ros::Subscriber traj_switch_sub = nh.subscribe<std_msgs::String>(uav_id + "/trajswitch", 10, std::bind(trajSwitchCallback, std::placeholders::_1, std::ref(quadrotor_ctrl.trajectory)));
     ros::Subscriber controller_sw_sub = nh.subscribe<std_msgs::Int32>(uav_id + "/controller_sw", 10, std::bind(controllerSWCallback, std::placeholders::_1, std::ref(scheduler)));
 
+
+    //暂时写在这里
+    force_pub= nh.advertise<geometry_msgs::Vector3Stamped>(uav_id + "/cable_force", 10);
+    ros::Subscriber qsls_state_sub_ = nh.subscribe<test_controller::QSLSState>(uav_id + "/qsls_state", 10, std::bind(tempQSLSStateCallback, std::placeholders::_1, std::ref(qsls_ctrl.params),std::ref(qsls_ctrl.control_input)));
+    
     // 利用 ROS 定时器实现 offboard/arming 切换，每 5 秒触发一次
     ros::Timer offboard_arm_timer = nh.createTimer(ros::Duration(5.0), std::bind(offboardArmCallback, std::placeholders::_1, std::ref(set_mode_client), std::ref(arming_client)));
     // 设置循环执行频率
     ros::Rate Rate(controller_rate);
-
+    int i = 0;
     while (ros::ok())
-    {
+    { 
       ros::spinOnce();
+      // DEV_GPIO_Write(17, DEV_GPIO_HIGH);
       // 运行控制器
-      Eigen::VectorXd control_signal(4);
-      scheduler.run();
-      // 控制器同时只能发布一个控制指令(因为执行对象只有一个)
-      control_signal(0) = control_input.mavlink_thrust;
-      control_signal(1) = control_input.mavlink_omega(0);
-      control_signal(2) = control_input.mavlink_omega(1);
-      control_signal(3) = control_input.mavlink_omega(2);
-      // 发送控制指令到飞控
-      sendCommandMavros(control_signal, local_rate_pub, local_thrust_pub);
-      
-      test_controller::UAVCommand command_msg;
-      command_msg.thrust = control_input.thrust;
-      command_msg.omega.x = control_input.omega(0);
-      command_msg.omega.y = control_input.omega(1);
-      command_msg.omega.z = control_input.omega(2);
-      // 发送控制指令到仿真环境
-      control_pub.publish(command_msg);
+      if(!i){
+        Eigen::VectorXd control_signal(4);
+        scheduler.run();
+        // 控制器同时只能发布一个控制指令(因为执行对象只有一个)
+        control_signal(0) = control_input.mavlink_thrust;
+        control_signal(1) = control_input.mavlink_omega(0);
+        control_signal(2) = control_input.mavlink_omega(1);
+        control_signal(3) = control_input.mavlink_omega(2);
+        // 发送控制指令到飞控
+        sendCommandMavros(control_signal, local_rate_pub, local_thrust_pub);
+        
+        test_controller::UAVCommand command_msg;
+        command_msg.thrust = control_input.thrust;
+        command_msg.omega.x = control_input.omega(0);
+        command_msg.omega.y = control_input.omega(1);
+        command_msg.omega.z = control_input.omega(2);
+        // 发送控制指令到仿真环境
+        control_pub.publish(command_msg);
+      }
+      i=(++i)%prescaler;
+      // DEV_GPIO_Write(17, DEV_GPIO_LOW);
       Rate.sleep();
+
     }
   }
   else

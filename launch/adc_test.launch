@@ -6,14 +6,14 @@
     <arg name="log_output" default="screen" />
     <arg name="fcu_protocol" default="v2.0" />
     <arg name="respawn_mavros" default="false" />
-    <!-- 启动 PX4 -->
+    <!-- 启动 PX4-->
     <arg name="uav_id" default="X250"/>
     <arg name="simulation" default="false"/>
     <arg name="file_path" default="$(find test_controller)/json/myparams.json"/>
-    <arg name="controller_rate" default="200"/>
+    <arg name="controller_rate" default="300"/>
     <arg name="observer_rate" default="200"/>
-    <arg name="prescaler" default="1"/>
-    <group unless="$(arg simulation)" ns="$(arg uav_id)">
+    <arg name="prescaler" default="2"/>
+    <!-- <group unless="$(arg simulation)" ns="$(arg uav_id)">
         <include file="$(find mavros)/launch/px4.launch" >
             <arg name="fcu_url" value="$(arg fcu_url)" />
             <arg name="gcs_url" value="$(arg gcs_url)" />
@@ -23,33 +23,33 @@
             <arg name="fcu_protocol" value="$(arg fcu_protocol)" />
             <arg name="respawn_mavros" value="$(arg respawn_mavros)" />
         </include>
-    </group>
+    </group> -->
 
-    <!-- 启动 Controller 节点 -->
-    <node pkg="test_controller" type="controller" name="controller" output="screen">
-        <param name="controller_param" value="some_value" />
+    <!-- 启动 adc 节点 -->
+    <node pkg="test_controller" type="triple_adc_read" name="adc" output="screen">
+        <param name="adc_param" value="some_value" />
         <param name="simulation" value="$(arg simulation)" />
-        <param name="uav_id" value="$(arg uav_id)" />
+       <param name="uav_id" value="$(arg uav_id)" />
         <param name="file_path" value="$(arg file_path)" />
         <param name="controller_rate" value="$(arg controller_rate)" />
-        <param name="prescaler" value="$(arg prescaler)" />
+       
 
 
     </node>
     <!-- 启动 Observer 节点 -->
-    <node pkg="test_controller" type="observer" name="observer" output="log">
+    <!-- <node pkg="test_controller" type="observer" name="observer" output="log">
         <param name="observer_param" value="some_value" />
         <param name="uav_id" value="$(arg uav_id)" />
         <param name="simulation" value="$(arg simulation)" />
         <param name="file_path" value="$(arg file_path)" />
         <param name="observer_rate" value="$(arg observer_rate)" />
-    </node>
+    </node> -->
     <!-- 启动 Simu Python 脚本 -->
-    <group if="$(arg simulation)">
+    <!-- <group if="$(arg simulation)">
         <node pkg="test_controller" type="simuQSLS.py" name="simu" output="screen">
         <param name="uav_id" value="$(arg uav_id)" />
     </node>
-    </group>
+    </group> -->
     <!-- 启动 Estimator 节点 -->
     <!-- <node pkg="test_controller" type="estimator" name="estimator" output="log">
         <param name="estimator_param" value="some_value" />

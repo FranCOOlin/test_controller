@@ -9,7 +9,7 @@
 #include "test_controller/triple_adc/dev_config.h"
 #include "test_controller/triple_adc/ADS1263.h"
 
-#define spi_device "/dev/spidev0.1"
+#define spi_device "/dev/spidev1.1"
 // 全局发布者，用于在回调函数中发布消息
 ros::Publisher pub;
 
@@ -41,16 +41,20 @@ int main(int argc, char **argv)
     pub = nh.advertise<geometry_msgs::Vector3Stamped>(uav_id+"/triple_adc_value", 10);
 
     
-    ros::Rate loop_rate(100);  // 10 Hz
+    ros::Rate loop_rate(10);  // 10 Hz
 
     DEV_HARDWARE_SPI_begin(spi_device);
-    int START_PIN = DEV_GPIO26;
-    DEV_GPIO_INIT(START_PIN, DEV_GPIO_OUTPUT,0);
-    ADS1263 adc1(DEV_GPIO22, DEV_GPIO27,1.25);
-    ADS1263 adc2(DEV_GPIO23, DEV_GPIO28,1.25);
-    ADS1263 adc3(DEV_GPIO24, DEV_GPIO29,1.25);
-
-
+    int START_PIN = 25;
+    // DEV_GPIO_INIT(START_PIN, DEV_GPIO_OUTPUT,0);
+    // DEV_GPIO_INIT(24, DEV_GPIO_OUTPUT,0);
+    uint8_t buf[4] = {0x00,0x10,0x01,0x11};
+    // DEV_GPIO_Write(24, DEV_GPIO_HIGH);
+    // DEV_HARDWARE_SPI_Transfer(buf,4);
+    // DEV_GPIO_Write(24, DEV_GPIO_LOW);
+    // DEV_HARDWARE_SPI_Transfer(buf,4);
+    ADS1263 adc1(19, 23,1.25);
+    ADS1263 adc2(20, 23,1.25);
+    ADS1263 adc3(22, 23,1.25);
     geometry_msgs::Vector3Stamped msg;
 
     
@@ -58,8 +62,12 @@ int main(int argc, char **argv)
     {
         ros::spinOnce();
         DEV_GPIO_Write(START_PIN, DEV_GPIO_HIGH);
+        
         adc1.waitDRDY();
+        ros::Time current_time = ros::Time::now();
+        
         double value1 = adc1.readADC1Data();
+        ROS_INFO("Time: %.3f",current_time.toSec()-ros::Time::now().toSec());  
         double value2 = adc2.readADC1Data();
         double value3 = adc3.readADC1Data();
         ROS_INFO("ADC1 Value: %+5f, ADC2 Value: %+5f, ADC3 Value: %+5f", value1, value2, value3);

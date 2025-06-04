@@ -18,10 +18,10 @@ class MultiDimDataCollector:
         self.time = []
 
         # 订阅两个话题 (根据你实际的话题和消息类型来改)
-        self.sub_qsls_state = rospy.Subscriber("/XMM1/qsls_state",
+        self.sub_qsls_state = rospy.Subscriber("/X250/myqsls_state",
                                           QSLSState,
                                           self.callback_qsls_state)
-        self.sub_qsls_feedback = rospy.Subscriber("/XMM1/qsls_feedback",
+        self.sub_qsls_feedback = rospy.Subscriber("/X250/qsls_state",
                                             QSLSState,
                                             self.callback_qsls_feedback)
 

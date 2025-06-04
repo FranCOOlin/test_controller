@@ -297,16 +297,23 @@ double ADS1263::readADC1Data(void)
     int read = 0;
     UBYTE buf[4] = {0};
     UBYTE Status, CRC;
+    //ROS_INFO("1");
     DEV_GPIO_Write(DEV_CS_PIN, 0);
+    
+    //ROS_INFO("2");
     do {
         DEV_HARDWARE_SPI_TransferByte(CMD_RDATA1);
         Status = DEV_HARDWARE_SPI_ReadByte();
+        //ROS_INFO("3");
     } while((Status & 0x40) == 0);
-    
     buf[0] = DEV_HARDWARE_SPI_ReadByte();
+    //ROS_INFO("4");
     buf[1] = DEV_HARDWARE_SPI_ReadByte();
+    //ROS_INFO("5");
     buf[2] = DEV_HARDWARE_SPI_ReadByte();
+    //ROS_INFO("6");
     buf[3] = DEV_HARDWARE_SPI_ReadByte();
+    //ROS_INFO("7");
     CRC = DEV_HARDWARE_SPI_ReadByte();
     DEV_GPIO_Write(DEV_CS_PIN, 1);
     read |= ((UDOUBLE)buf[0] << 24);
